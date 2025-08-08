@@ -6,6 +6,8 @@
   <title>BUMPER Burn — Live Dashboard</title>
   <meta name="description" content="Live burn dashboard for BUMPER on Solana: total burned, USD value, price, and recent burn transactions." />
   <link rel="preload" as="image" href="bg-desktop.png">
+  <link rel="preload" as="image" href="bg-thumb.webp">
+  <link rel="preload" as="image" href="titolo.png">
   <style>
     :root{
       --glass-bg: rgba(0,0,0,0.38);
@@ -25,16 +27,21 @@
 
   <script>
     // ---- Config ----
-    const BG_SRC     = 'bg-desktop.png';       // main image (can be heavy)
-    const THUMB_SRC  = 'bg-thumb.webp';        // lightweight 400–800px preview (optional but recommended)
-    const BURN_JSON  = 'data/burn.json';
-    const PRICE_JSON = 'data/price.json';
-    const FIT_MODE   = 'cover'; // 'contain' to avoid any crop
+    const BG_SRC      = 'bg-desktop.png';       // main background
+    const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional but recommended)
+    const TITLE_SRC   = 'titolo.png';           // title image
+    const BURN_JSON   = 'data/burn.json';
+    const PRICE_JSON  = 'data/price.json';
+    const FIT_MODE    = 'cover'; // 'contain' to avoid any crop
 
     // Layout anchors (relative to canvas height)
-    let TOP_OVERLAY_Y   = 0.12; // moved higher
+    let TOP_OVERLAY_Y   = 0.12; // y for the two top cards
+    let UPDATED_Y       = 0.62; // moved up: just under the car
     let BOTTOM_PRICE_Y  = 0.90;
-    let UPDATED_Y       = 0.74; // moved lower (closer to bottom)
+
+    // Supply card custom anchor (desktop only)
+    let SUPPLY_LEFT_X_PCT = 0.06; // 6% from left edge
+    let SUPPLY_Y_PCT      = 0.58; // near the ground, under legionaries
 
     // Colors
     const COLOR = {
@@ -64,8 +71,8 @@
         canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      if (h < 700) { TOP_OVERLAY_Y = 0.10; UPDATED_Y = 0.70; BOTTOM_PRICE_Y = 0.88; }
-      else { TOP_OVERLAY_Y = 0.12; UPDATED_Y = 0.74; BOTTOM_PRICE_Y = 0.90; }
+      if (h < 700) { TOP_OVERLAY_Y = 0.10; UPDATED_Y = 0.66; BOTTOM_PRICE_Y = 0.88; }
+      else { TOP_OVERLAY_Y = 0.12; UPDATED_Y = 0.62; BOTTOM_PRICE_Y = 0.90; }
     }
 
     function scaleUnit() {
@@ -93,16 +100,20 @@
       }
     }
 
+    // Title image
+    const titleImg = new Image();
+    let titleReady = false;
+    titleImg.onload = ()=>{ titleReady = true; draw(); };
+    titleImg.onerror = ()=>{ console.warn('Failed to load title image:', TITLE_SRC); };
+    titleImg.src = TITLE_SRC;
+
     // Start loading: thumb first, then main
     (async function initBackground(){
-      // Try thumb (optional). If missing, this will just be null.
-      thumbBitmap = await loadBitmap(THUMB_SRC);
-      draw(); // paint asap (with blur placeholder if available)
-      // Then main
+      thumbBitmap = await loadBitmap(THUMB_SRC); // may be null if file not provided
+      draw();
       mainBitmap = await loadBitmap(BG_SRC);
       if (mainBitmap) {
         bgReady = true;
-        // Smooth crossfade from thumb -> main
         const start = performance.now();
         function step(t){
           const k = Math.min(1, (t - start) / 450); // 450ms fade
@@ -171,7 +182,6 @@
       grad.addColorStop(0, 'rgba(0,0,0,0.12)');
       grad.addColorStop(1, 'rgba(0,0,0,0.40)');
 
-      // Choose which bitmap to show
       const showThumb = thumbBitmap && (!mainBitmap || fadeAlpha < 1);
       const bmp = (bgReady && mainBitmap) ? mainBitmap : (thumbBitmap || null);
 
@@ -182,26 +192,15 @@
         const dx = (w - dw) / 2; const dy = (h - dh) / 2;
 
         if (showThumb && thumbBitmap){
-          // Blur the low-res placeholder
-          ctx.save();
-          ctx.filter = 'blur(8px)';
-          ctx.drawImage(thumbBitmap, dx, dy, dw, dh);
-          ctx.restore();
+          ctx.save(); ctx.filter = 'blur(8px)';
+          ctx.drawImage(thumbBitmap, dx, dy, dw, dh); ctx.restore();
         }
-
         if (bgReady && mainBitmap){
-          // Crossfade main image in
-          ctx.save();
-          ctx.globalAlpha = fadeAlpha || 1;
-          ctx.filter = 'none';
-          ctx.drawImage(mainBitmap, dx, dy, dw, dh);
-          ctx.restore();
+          ctx.save(); ctx.globalAlpha = fadeAlpha || 1; ctx.filter = 'none';
+          ctx.drawImage(mainBitmap, dx, dy, dw, dh); ctx.restore();
         }
-
-        // Overlay gradient
         ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
       } else {
-        // Solid fallback while no image available
         ctx.fillStyle = '#0b0b12'; ctx.fillRect(0,0,w,h);
       }
     }
@@ -214,10 +213,20 @@
       drawBackground(w, h);
       linkHitboxes = [];
 
-      // --- Title ---
+      // --- Title image (centered above cards) ---
       const topY = Math.floor(h * TOP_OVERLAY_Y);
-      const title = 'BUMPER BURN';
-      text({ str: title, x: Math.floor(w/2), y: Math.max(px(24), topY - px(28)), size: px(34), weight: 900, align: 'center' });
+      if (titleReady){
+        const maxW = Math.min(w * 0.5, px(640));
+        const scale = maxW / titleImg.naturalWidth;
+        const tw = maxW;
+        const th = titleImg.naturalHeight * scale;
+        const tx = Math.floor((w - tw) / 2);
+        const ty = Math.max(px(14), topY - th - px(10));
+        ctx.drawImage(titleImg, tx, ty, tw, th);
+      } else {
+        // fallback text title
+        text({ str: 'BUMPER BURN', x: Math.floor(w/2), y: Math.max(px(24), topY - px(28)), size: px(34), weight: 900, align: 'center' });
+      }
 
       // --- Top metrics (two cards) ---
       const cardW = Math.min(Math.max(px(300), Math.floor(w*0.28)), px(520));
@@ -240,12 +249,22 @@
       text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent,  baseline: 'top' });
       text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
 
-      // --- Supply card (centered below the two) ---
+      // --- Supply card ---
       const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
         ? price.totalSupplyTokensNum
         : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
-      const supplyY = topY + cardH + px(14);
-      const supplyX = Math.floor((w - cardW)/2);
+
+      let supplyX, supplyY;
+      if (w < 800) {
+        // mobile/tablet: keep it centered below the two cards
+        supplyY = topY + cardH + px(14);
+        supplyX = Math.floor((w - cardW)/2);
+      } else {
+        // desktop: left-bottom by percentage anchors
+        supplyY = Math.floor(h * SUPPLY_Y_PCT);
+        supplyX = Math.floor(w * SUPPLY_LEFT_X_PCT);
+      }
+
       drawGlass(supplyX, supplyY, cardW, cardH);
       text({ str: 'Total supply', x: supplyX+padX, y: supplyY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
       text({ str: formatSupplyCompact(supplyNum), x: supplyX+padX, y: supplyY+padY+px(32), size: px(22), weight: 800, color: COLOR.text, baseline: 'top' });
