@@ -1,4 +1,4 @@
-<!doctype html>
+const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAlpha < 1);<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -37,13 +37,14 @@
 
     // Require everything ready before drawing UI (avoid seeing title before bg)
     const DRAW_UI_ONLY_WHEN_READY = true;
+    const USE_THUMB_PLACEHOLDER   = false; // draw only when main bg is ready
 
     // Layout anchors (relative to canvas height)
     let TOP_OVERLAY_Y   = 0.12; // y for the two top cards
     let BOTTOM_PRICE_Y  = 0.90;
 
-    // Title placement: pin to top center
-    const TITLE_TOP_MARGIN_PX = 12; // distance from top edge
+    // Title placement: pin to top center (crop transparent padding)
+    const TITLE_TOP_MARGIN_PX = 6; // distance from top edge // distance from top edge
 
     // Colors
     const COLOR = {
@@ -87,6 +88,7 @@
     // -------- Progressive background loading (blur-up + crossfade) --------
     let thumbBitmap = null;
     let mainBitmap  = null;
+    let titleTrim   = null; // {top,bottom,left,right} in px (source image space)
     let bgReady = false;
     let fadeAlpha = 0; // 0..1
 
@@ -105,7 +107,36 @@
     // Title image
     const titleImg = new Image();
     let titleReady = false;
-    titleImg.onload = ()=>{ titleReady = true; draw(); };
+    titleImg.onload = ()=>{
+      // Compute transparent padding to trim (so it can hug the top edge)
+      try {
+        const iw = titleImg.naturalWidth, ih = titleImg.naturalHeight;
+        const off = document.createElement('canvas');
+        off.width = iw; off.height = ih;
+        const octx = off.getContext('2d');
+        octx.drawImage(titleImg, 0, 0);
+        const { data } = octx.getImageData(0,0,iw,ih);
+        const alphaAt = (x,y)=> data[(y*iw + x)*4 + 3];
+        let top=0, bottom=ih-1, left=0, right=iw-1;
+        // find top
+        findTop: for (let y=0; y<ih; y++){
+          for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 8){ top=y; break findTop; } }
+        }
+        // find bottom
+        findBottom: for (let y=ih-1; y>=0; y--){
+          for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 8){ bottom=y; break findBottom; } }
+        }
+        // (optional) left/right — not strictly needed but good to have
+        findLeft: for (let x=0; x<iw; x++){
+          for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 8){ left=x; break findLeft; } }
+        }
+        findRight: for (let x=iw-1; x>=0; x--){
+          for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 8){ right=x; break findRight; } }
+        }
+        titleTrim = { top, bottom: ih-1-bottom, left, right: iw-1-right };
+      } catch(e){ console.warn('Title trim failed', e); titleTrim = null; }
+      titleReady = true; draw();
+    };
     titleImg.onerror = ()=>{ console.warn('Failed to load title image:', TITLE_SRC); };
     titleImg.src = TITLE_SRC;
 
@@ -222,13 +253,29 @@
 
       // --- Title image at top center ---
       if (titleReady){
-        const maxW = Math.min(w * 0.5, px(640));
-        const scale = maxW / titleImg.naturalWidth;
-        const tw = maxW;
-        const th = titleImg.naturalHeight * scale;
-        const tx = Math.floor((w - tw) / 2);
-        const ty = px(TITLE_TOP_MARGIN_PX);
-        ctx.drawImage(titleImg, tx, ty, tw, th);
+        // If we detected transparent padding, crop it out when drawing
+        if (titleTrim){
+          const srcX = titleTrim.left || 0;
+          const srcY = titleTrim.top  || 0;
+          const srcW = titleImg.naturalWidth  - (titleTrim.left||0) - (titleTrim.right||0);
+          const srcH = titleImg.naturalHeight - (titleTrim.top ||0) - (titleTrim.bottom||0);
+          const maxW = Math.min(w * 0.55, px(760));
+          const scale = maxW / srcW;
+          const tw = maxW;
+          const th = srcH * scale;
+          const tx = Math.floor((w - tw) / 2);
+          const ty = px(TITLE_TOP_MARGIN_PX);
+          ctx.drawImage(titleImg, srcX, srcY, srcW, srcH, tx, ty, tw, th);
+        } else {
+          const maxW = Math.min(w * 0.55, px(760));
+          const scale = maxW / titleImg.naturalWidth;
+          const tw = maxW;
+          const th = titleImg.naturalHeight * scale;
+          const tx = Math.floor((w - tw) / 2);
+          const ty = px(TITLE_TOP_MARGIN_PX);
+          ctx.drawImage(titleImg, tx, ty, tw, th);
+        }
+      }
       }
 
       // --- Top metrics (two cards) ---
@@ -259,7 +306,7 @@
       const rows = rowsAll.slice(0, maxRows);
 
       const tableW = Math.min(Math.max(px(420), Math.floor(w*0.92)), px(1000));
-      const rowH   = px(24), headH = px(32), tPad = px(10);
+      const rowH   = px(24), headH = px(46), tPad = px(10);
       const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2;
       let tableX = Math.floor((w - tableW)/2);
       // Put table just under the car area (approximate 62% height)
@@ -298,7 +345,15 @@
       drawGlass(tableX, tableY, tableW, tableH);
       text({ str: 'Recent burns', x: tableX+tPad, y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
+      // Column headers placed lower than the section title
+      const headersY = tableY + tPad + px(20);
+      text({ str: '#',               x: tableX+tPad+6,                   y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      text({ str: 'Amount (BUMPER)', x: tableX+tPad+px(32)+8,            y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      text({ str: 'Transaction',     x: tableX+tPad+px(32)+Math.max(px(150), Math.floor(tableW*0.28))+8, y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+
       const colIndexW = px(32);
+      const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
+      const colLinkW  = tableW - tPad*2 - colIndexW - colQtyW; = px(32);
       const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
       const colLinkW  = tableW - tPad*2 - colIndexW - colQtyW;
 
