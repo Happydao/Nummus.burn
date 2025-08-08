@@ -1,4 +1,4 @@
-const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAlpha < 1);<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -28,23 +28,23 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
   <script>
     // ---- Config ----
     const BG_SRC      = 'bg-desktop.png';       // main background
-    const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional but recommended)
-    const TITLE_SRC   = 'titolotr.png';         // title image (new)
+    const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional)
+    const TITLE_SRC   = 'titolotr.png';         // title image (trimmed to remove transparent padding)
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
     const FIT_MODE    = 'cover'; // 'contain' to avoid any crop
 
-    // Require everything ready before drawing UI (avoid seeing title before bg)
+    // Draw UI only when everything is ready (bg + title + data)
     const DRAW_UI_ONLY_WHEN_READY = true;
-    const USE_THUMB_PLACEHOLDER   = false; // draw only when main bg is ready
+    const USE_THUMB_PLACEHOLDER   = false; // if true, shows blurred thumb before HD bg
 
-    // Layout anchors (relative to canvas height)
+    // Layout anchors
     let TOP_OVERLAY_Y   = 0.12; // y for the two top cards
     let BOTTOM_PRICE_Y  = 0.90;
 
-    // Title placement: pin to top center (crop transparent padding)
-    const TITLE_TOP_MARGIN_PX = 6; // distance from top edge // distance from top edge
+    // Title placement (top center)
+    const TITLE_TOP_MARGIN_PX = 6;
 
     // Colors
     const COLOR = {
@@ -74,7 +74,6 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
         canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      // keep top cards a bit higher on short screens
       TOP_OVERLAY_Y = (h < 700) ? 0.10 : 0.12;
     }
 
@@ -88,7 +87,7 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
     // -------- Progressive background loading (blur-up + crossfade) --------
     let thumbBitmap = null;
     let mainBitmap  = null;
-    let titleTrim   = null; // {top,bottom,left,right} in px (source image space)
+    let titleTrim   = null; // {top,bottom,left,right}
     let bgReady = false;
     let fadeAlpha = 0; // 0..1
 
@@ -97,18 +96,17 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
         const res = await fetch(src, { cache: 'force-cache' });
         if (!res.ok) throw new Error('HTTP '+res.status);
         const blob = await res.blob();
-        return await createImageBitmap(blob, { imageOrientation: 'none', premultiplyAlpha: 'default' });
+        return await createImageBitmap(blob);
       } catch (e) {
         console.warn('Image load failed:', src, e.message);
         return null;
       }
     }
 
-    // Title image
+    // Title image (auto-trim transparent padding)
     const titleImg = new Image();
     let titleReady = false;
     titleImg.onload = ()=>{
-      // Compute transparent padding to trim (so it can hug the top edge)
       try {
         const iw = titleImg.naturalWidth, ih = titleImg.naturalHeight;
         const off = document.createElement('canvas');
@@ -118,21 +116,10 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
         const { data } = octx.getImageData(0,0,iw,ih);
         const alphaAt = (x,y)=> data[(y*iw + x)*4 + 3];
         let top=0, bottom=ih-1, left=0, right=iw-1;
-        // find top
-        findTop: for (let y=0; y<ih; y++){
-          for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 8){ top=y; break findTop; } }
-        }
-        // find bottom
-        findBottom: for (let y=ih-1; y>=0; y--){
-          for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 8){ bottom=y; break findBottom; } }
-        }
-        // (optional) left/right — not strictly needed but good to have
-        findLeft: for (let x=0; x<iw; x++){
-          for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 8){ left=x; break findLeft; } }
-        }
-        findRight: for (let x=iw-1; x>=0; x--){
-          for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 8){ right=x; break findRight; } }
-        }
+        for (let y=0; y<ih; y++){ for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 8){ top=y; y=ih; break; } } }
+        for (let y=ih-1; y>=0; y--){ for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 8){ bottom=y; y=-1; break; } } }
+        for (let x=0; x<iw; x++){ for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 8){ left=x; x=iw; break; } } }
+        for (let x=iw-1; x>=0; x--){ for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 8){ right=x; x=-1; break; } } }
         titleTrim = { top, bottom: ih-1-bottom, left, right: iw-1-right };
       } catch(e){ console.warn('Title trim failed', e); titleTrim = null; }
       titleReady = true; draw();
@@ -140,24 +127,21 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
     titleImg.onerror = ()=>{ console.warn('Failed to load title image:', TITLE_SRC); };
     titleImg.src = TITLE_SRC;
 
-    // Start loading: thumb first, then main
+    // Load bg: thumb (optional) then main
     (async function initBackground(){
-      thumbBitmap = await loadBitmap(THUMB_SRC); // may be null if file not provided
+      thumbBitmap = await loadBitmap(THUMB_SRC); // may be null
       draw();
       mainBitmap = await loadBitmap(BG_SRC);
       if (mainBitmap) {
         bgReady = true;
         const start = performance.now();
         function step(t){
-          const k = Math.min(1, (t - start) / 450); // 450ms fade
-          fadeAlpha = k;
-          draw();
+          const k = Math.min(1, (t - start) / 450);
+          fadeAlpha = k; draw();
           if (k < 1) requestAnimationFrame(step);
         }
         requestAnimationFrame(step);
-      } else {
-        draw();
-      }
+      } else { draw(); }
     })();
 
     // Data
@@ -177,8 +161,7 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
     // Helpers
     function roundRectPath(x, y, w, h, r){
       const rr = Math.min(r, w/2, h/2);
-      ctx.beginPath();
-      ctx.moveTo(x+rr, y);
+      ctx.beginPath(); ctx.moveTo(x+rr, y);
       ctx.arcTo(x+w, y, x+w, y+h, rr);
       ctx.arcTo(x+w, y+h, x, y+h, rr);
       ctx.arcTo(x, y+h, x, y, rr);
@@ -199,7 +182,6 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
     }
     function fitNumber(n, maxDp){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); const dp = abs >= 1 ? Math.min(maxDp, 2) : Math.min(maxDp, 6); return n.toLocaleString(undefined, { maximumFractionDigits: dp }); }
     function money(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }); }
-
     function formatSupplyCompact(n){
       if (typeof n !== 'number' || !isFinite(n)) return '—';
       const abs = Math.abs(n);
@@ -215,23 +197,16 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
       grad.addColorStop(0, 'rgba(0,0,0,0.12)');
       grad.addColorStop(1, 'rgba(0,0,0,0.40)');
 
-      const showThumb = thumbBitmap && (!mainBitmap || fadeAlpha < 1);
-      const bmp = (bgReady && mainBitmap) ? mainBitmap : (thumbBitmap || null);
+      const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAlpha < 1);
+      const bmp = (bgReady && mainBitmap) ? mainBitmap : (showThumb ? thumbBitmap : null);
 
       if (bmp){
         const imgW = bmp.width, imgH = bmp.height;
         const scale = (FIT_MODE === 'cover') ? Math.max(w / imgW, h / imgH) : Math.min(w / imgW, h / imgH);
         const dw = imgW * scale; const dh = imgH * scale;
         const dx = (w - dw) / 2; const dy = (h - dh) / 2;
-
-        if (showThumb && thumbBitmap){
-          ctx.save(); ctx.filter = 'blur(8px)';
-          ctx.drawImage(thumbBitmap, dx, dy, dw, dh); ctx.restore();
-        }
-        if (bgReady && mainBitmap){
-          ctx.save(); ctx.globalAlpha = fadeAlpha || 1; ctx.filter = 'none';
-          ctx.drawImage(mainBitmap, dx, dy, dw, dh); ctx.restore();
-        }
+        if (showThumb){ ctx.save(); ctx.filter = 'blur(8px)'; ctx.drawImage(bmp, dx, dy, dw, dh); ctx.restore(); }
+        else { ctx.drawImage(bmp, dx, dy, dw, dh); }
         ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
       } else {
         ctx.fillStyle = '#0b0b12'; ctx.fillRect(0,0,w,h);
@@ -246,14 +221,13 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
       drawBackground(w, h);
       linkHitboxes = [];
 
-      // Gate: don't draw UI until bg + title + data ready (if enabled)
+      // Wait until bg + title + data are ready
       const dataReady = !!(burn && price);
       const uiReady = (!!mainBitmap && !!titleReady && dataReady);
-      if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return; // wait until all ready
+      if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return;
 
       // --- Title image at top center ---
       if (titleReady){
-        // If we detected transparent padding, crop it out when drawing
         if (titleTrim){
           const srcX = titleTrim.left || 0;
           const srcY = titleTrim.top  || 0;
@@ -261,21 +235,18 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
           const srcH = titleImg.naturalHeight - (titleTrim.top ||0) - (titleTrim.bottom||0);
           const maxW = Math.min(w * 0.55, px(760));
           const scale = maxW / srcW;
-          const tw = maxW;
-          const th = srcH * scale;
+          const tw = maxW; const th = srcH * scale;
           const tx = Math.floor((w - tw) / 2);
           const ty = px(TITLE_TOP_MARGIN_PX);
           ctx.drawImage(titleImg, srcX, srcY, srcW, srcH, tx, ty, tw, th);
         } else {
           const maxW = Math.min(w * 0.55, px(760));
           const scale = maxW / titleImg.naturalWidth;
-          const tw = maxW;
-          const th = titleImg.naturalHeight * scale;
+          const tw = maxW; const th = titleImg.naturalHeight * scale;
           const tx = Math.floor((w - tw) / 2);
           const ty = px(TITLE_TOP_MARGIN_PX);
           ctx.drawImage(titleImg, tx, ty, tw, th);
         }
-      }
       }
 
       // --- Top metrics (two cards) ---
@@ -300,7 +271,7 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
       text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent,  baseline: 'top' });
       text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
 
-      // --- Compute table layout (we need it to place mini-cards above it) ---
+      // --- Compute table layout ---
       const rowsAll = (burn?.burns || []);
       const maxRows = w < 520 ? 8 : (w < 900 ? 12 : 20);
       const rows = rowsAll.slice(0, maxRows);
@@ -309,33 +280,31 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
       const rowH   = px(24), headH = px(46), tPad = px(10);
       const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2;
       let tableX = Math.floor((w - tableW)/2);
-      // Put table just under the car area (approximate 62% height)
-      let tableTopAnchor = Math.floor(h * 0.64);
-      let tableY = tableTopAnchor;
+      let tableY = Math.floor(h * 0.64); // just below the car
       if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
       // --- Mini-cards above table: Supply (left) and Last updated (right) ---
       const miniGap = px(10);
       const miniH = px(42);
 
-      // Supply mini-card (one-line, small)
+      // Supply
       const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
         ? price.totalSupplyTokensNum
         : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
       const supplyStr = `Total supply: ${formatSupplyCompact(supplyNum)}`;
       ctx.font = `700 ${px(12)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       let meas = ctx.measureText(supplyStr);
-      const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(320));
+      const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(360));
       const supplyX = tableX;
       const supplyY = tableY - miniH - miniGap;
       drawGlass(supplyX, supplyY, supplyW, miniH);
       text({ str: supplyStr, x: supplyX + px(12), y: supplyY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
 
-      // Last updated mini-card (right)
+      // Last updated
       const updated = price?.updatedAt || burn?.updatedAt || null;
       const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
       meas = ctx.measureText(updatedStr);
-      const updW = Math.min(Math.max(meas.width + px(24), px(220)), px(360));
+      const updW = Math.min(Math.max(meas.width + px(24), px(220)), px(420));
       const updX = tableX + tableW - updW;
       const updY = supplyY;
       drawGlass(updX, updY, updW, miniH);
@@ -353,14 +322,9 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
 
       const colIndexW = px(32);
       const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
-      const colLinkW  = tableW - tPad*2 - colIndexW - colQtyW; = px(32);
-      const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
       const colLinkW  = tableW - tPad*2 - colIndexW - colQtyW;
 
-      text({ str: '#',               x: tableX+tPad+6,                      y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
-      text({ str: 'Amount (BUMPER)', x: tableX+tPad+colIndexW+8,            y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
-      text({ str: 'Transaction',     x: tableX+tPad+colIndexW+colQtyW+8,    y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
-
+      // Rows
       linkHitboxes = [];
       for (let i=0; i<Math.max(1, rows.length); i++){
         const ry = tableY + headH + tPad + i*rowH;
@@ -376,7 +340,7 @@ const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAl
         linkHitboxes.push({ x: tableX+tPad+colIndexW+colQtyW+8, y: ry - Math.floor(rowH*0.2), w: m2.width, h: Math.floor(rowH*0.9), url });
       }
 
-      // --- Bottom price (unchanged) ---
+      // --- Bottom price ---
       const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
       const label = `BUMPER price: ${priceStr} USD`;
       ctx.font = `700 ${px(16)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
