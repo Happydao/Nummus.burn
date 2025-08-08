@@ -2,7 +2,6 @@
 <html lang="it">
 <head>
   <meta charset="utf-8" />
-  <!-- Manteniamo viewport standard. Il layout desktop resta quello che hai scelto. -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>BUMPER Burn — Live Dashboard</title>
   <meta name="description" content="Live burn dashboard for BUMPER on Solana: total burned, USD value, price, and recent burn transactions." />
@@ -32,22 +31,20 @@
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
-    const FIT_MODE    = 'cover'; // DESKTOP: resta cover (come volevi)
+    const FIT_MODE    = 'cover'; // Desktop & Mobile: sempre cover (nessuna banda)
 
-    // UI only when bg + data
+    // Disegna UI solo quando bg + dati ok
     const DRAW_UI_ONLY_WHEN_READY = true;
     const USE_THUMB_PLACEHOLDER   = false;
 
-    // ======== DESKTOP positions (come da tue scelte) ========
-    const CARDS_Y_FRAC = 0.1350;
-    const CARD1_CENTER_X_FRAC = 0.3220;
-    const CARD2_CENTER_X_FRAC = 0.6520;
+    // ======== POSIZIONI DESKTOP (come da tue scelte) ========
+    const CARDS_Y_FRAC = 0.1350;          // y fraction (sotto titolo, evita auto)
+    const CARD1_CENTER_X_FRAC = 0.3220;   // Total burned (sotto BELLA)
+    const CARD2_CENTER_X_FRAC = 0.6520;   // Total USD burned (sotto BURN)
 
-    // ======== SOLO MOBILE ========
-    const MOBILE_BREAKPOINT   = 900;     // < 900px consideriamo mobile
-    const MOBILE_CARDS_Y_FRAC = 0.28;    // card più basse su mobile (aumenta per più in basso)
-    const MOBILE_BG_MODE      = 'contain'; // su mobile mostriamo più scena
-    const MOBILE_BG_SHRINK    = 0.90;    // 90% della dimensione ideale -> ancora più area visibile
+    // ======== SOLO MOBILE (solo Y più in basso; X identiche al desktop) ========
+    const MOBILE_BREAKPOINT   = 900;      // < 900px = mobile
+    const MOBILE_CARDS_Y_FRAC = 0.28;     // alza/abbassa le card SOLO su mobile (es. 0.30 più giù, 0.24 più su)
 
     // Colors
     const COLOR = {
@@ -67,7 +64,7 @@
     ctx.imageSmoothingQuality = 'high';
 
     function resizeCanvasToDisplaySize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2); // limite per performance
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // clamp per performance
       const w = Math.floor(window.innerWidth);
       const h = Math.floor(window.innerHeight);
       if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
@@ -164,11 +161,11 @@
       const abs = Math.abs(n);
       if (abs >= 1e9)  return (n/1e9).toLocaleString(undefined,{ maximumFractionDigits: 3 }) + ' B';
       if (abs >= 1e6)  return (n/1e6).toLocaleString(undefined,{ maximumFractionDigits: 3 }) + ' M';
-      if (abs >= 1e3)  return (n/1e3).toLocaleString(undefined,{ maximumFractionDigits: 3 }) + ' K';
+      if (abs >= 1e3)  return (n/1e3).toLocaleString(undefined,{ maximumFractionDigits: 3 });
       return n.toLocaleString(undefined,{ maximumFractionDigits: 3 });
     }
 
-    function drawBackground(w, h, isMobile){
+    function drawBackground(w, h){
       // Base gradient for readability
       const grad = ctx.createLinearGradient(0,0,0,h);
       grad.addColorStop(0, 'rgba(0,0,0,0.12)');
@@ -177,18 +174,13 @@
       const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAlpha < 1);
       const bmp = (bgReady && mainBitmap) ? mainBitmap : (showThumb ? thumbBitmap : null);
 
-      // Scegli modalità di fit solo su mobile
-      const mode = isMobile ? MOBILE_BG_MODE : FIT_MODE;
-
       if (bmp){
         const imgW = bmp.width, imgH = bmp.height;
-        let scale = (mode === 'cover') ? Math.max(w / imgW, h / imgH) : Math.min(w / imgW, h / imgH);
-        if (isMobile) scale *= MOBILE_BG_SHRINK; // riduci un po' per mostrare più scena
+        const scale = (FIT_MODE === 'cover') ? Math.max(w / imgW, h / imgH) : Math.min(w / imgW, h / imgH);
         const dw = imgW * scale; const dh = imgH * scale;
         const dx = (w - dw) / 2; const dy = (h - dh) / 2;
         if (showThumb){ ctx.save(); ctx.filter = 'blur(8px)'; ctx.drawImage(bmp, dx, dy, dw, dh); ctx.restore(); }
         else { ctx.drawImage(bmp, dx, dy, dw, dh); }
-        // gradient sopra, per leggibilità
         ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
       } else {
         ctx.fillStyle = '#0b0b12'; ctx.fillRect(0,0,w,h);
@@ -201,10 +193,10 @@
       const isMobile = w < MOBILE_BREAKPOINT;
 
       ctx.clearRect(0,0,w,h);
-      drawBackground(w, h, isMobile);
+      drawBackground(w, h);
       linkHitboxes = [];
 
-      // Ready?
+      // Pronto?
       const dataReady = !!(burn && price);
       const uiReady = (!!mainBitmap && dataReady);
       if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return;
@@ -240,16 +232,16 @@
       const card2W = Math.ceil(Math.max(c2LabelW, c2ValueW) + padX*2);
       const card2H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      // y: desktop = tue frazioni; mobile = più in basso
+      // y pos: desktop = CARDS_Y_FRAC, mobile = MOBILE_CARDS_Y_FRAC
       let topY = Math.floor(h * (isMobile ? MOBILE_CARDS_Y_FRAC : CARDS_Y_FRAC));
 
-      // su desktop manteniamo la protezione per non coprire l'auto; su mobile la disattivo
+      // su desktop evita di coprire l'auto (limite ~33% h); su mobile lasciamo la tua scelta
       if (!isMobile) {
         const maxSafeY = Math.floor(h * 0.33 - Math.max(card1H, card2H));
         if (topY > maxSafeY) topY = Math.max(px(8), maxSafeY);
       }
 
-      // x: identiche anche su mobile (restano sotto BELLA/BURN come su desktop)
+      // x pos: SEMPRE le tue frazioni (niente fallback/recenter)
       const c1cx = Math.floor(w * CARD1_CENTER_X_FRAC);
       const c2cx = Math.floor(w * CARD2_CENTER_X_FRAC);
       const card1X = c1cx - Math.floor(card1W/2);
