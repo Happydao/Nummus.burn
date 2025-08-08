@@ -237,29 +237,8 @@
       const uiReady = (!!mainBitmap && !!titleReady && dataReady);
       if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return;
 
-      // --- Top metrics (two cards) ---
-      const topY = Math.floor(h * TOP_OVERLAY_Y);
-      const cardW = Math.min(Math.max(px(300), Math.floor(w*0.28)), px(520));
-      const cardH = px(84);
-      const gap   = Math.min(px(24), Math.floor(w*0.04));
-      const totalX = Math.floor((w - (cardW*2 + gap)) / 2);
-      const usdX   = totalX + cardW + gap;
-
-      drawGlass(totalX, topY, cardW, cardH);
-      drawGlass(usdX,  topY, cardW, cardH);
-
-      const totalTokens = burn?.totalUi ? Number(burn.totalUi) : 0;
-      const pxUsd = price?.priceUsd ? Number(price.priceUsd) : 0;
-      const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * pxUsd);
-
-      const padX = px(14), padY = px(12);
-      text({ str: 'Total burned',        x: totalX+padX, y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
-      text({ str: 'Total USD burned',    x: usdX+padX,   y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
-
-      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent,  baseline: 'top' });
-      text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
-
-      // --- Title image at top center (draw AFTER cards so it stays on top) ---
+      // --- Title image at top center (draw FIRST so cards appear above it) ---
+      let titleBottomY = 0;
       if (titleReady){
         if (titleTrim){
           const srcX = titleTrim.left || 0;
@@ -272,6 +251,7 @@
           const tx = Math.floor((w - tw) / 2);
           const ty = px(TITLE_TOP_MARGIN_PX);
           ctx.drawImage(titleImg, srcX, srcY, srcW, srcH, tx, ty, tw, th);
+          titleBottomY = ty + th;
         } else {
           const maxW = Math.min(w * 0.55, px(760));
           const scale = maxW / titleImg.naturalWidth;
@@ -279,8 +259,34 @@
           const tx = Math.floor((w - tw) / 2);
           const ty = px(TITLE_TOP_MARGIN_PX);
           ctx.drawImage(titleImg, tx, ty, tw, th);
+          titleBottomY = ty + th;
         }
       }
+
+      // --- Top metrics (two cards) ---
+      let topY = Math.floor(h * TOP_OVERLAY_Y);
+      if (titleBottomY > 0) topY = Math.max(topY, titleBottomY + px(8));
+      const cardW = Math.min(Math.max(px(260), Math.floor(w*0.26)), px(460));
+      const cardH = px(70);
+      const gap   = Math.min(px(18), Math.floor(w*0.035));
+      const totalX = Math.floor((w - (cardW*2 + gap)) / 2);
+      const usdX   = totalX + cardW + gap;
+
+      drawGlass(totalX, topY, cardW, cardH);
+      drawGlass(usdX,  topY, cardW, cardH);
+
+      const totalTokens = burn?.totalUi ? Number(burn.totalUi) : 0;
+      const pxUsd = price?.priceUsd ? Number(price.priceUsd) : 0;
+      const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * pxUsd);
+
+      const padX = px(14), padY = px(12);
+      text({ str: 'Total burned',        x: totalX+padX, y: topY+padY+2, size: px(11), color: COLOR.muted, weight: 700, baseline: 'top' });
+      text({ str: 'Total USD burned',    x: usdX+padX,   y: topY+padY+2, size: px(11), color: COLOR.muted, weight: 700, baseline: 'top' });
+
+      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(28), size: px(20), weight: 800, color: COLOR.accent,  baseline: 'top' });
+      text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(28), size: px(20), weight: 800, color: COLOR.accent2, baseline: 'top' });
+
+      // (title drawn earlier)
 
       // --- Compute table layout ---
       const rowsAll = (burn?.burns || []);
