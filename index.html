@@ -8,25 +8,15 @@
   <link rel="preload" as="image" href="bg-desktop.png">
   <style>
     :root{
-      /* Positioning tweaks for overlays relative to the background image */
-      --top-overlay-top: 18vh;      /* between the car and the legionaries' hands */
-      --top-overlay-gap: 2rem;      /* space between the two top metric cards */
-      --bottom-overlay-bottom: 8vh; /* near the geckos' feet */
-
-      --content-max: 1200px;
-
       --glass-bg: rgba(0,0,0,0.38);
       --glass-border: rgba(255,255,255,0.25);
       --text: #f3f3f3;
       --muted: #c8c8c8;
-      --accent: #78ffb2;   /* solana-ish green */
-      --accent2: #ff5fd2;  /* neon magenta */
+      --accent: #78ffb2;
+      --accent2: #ff5fd2;
     }
     *{ box-sizing: border-box; }
-    html, body { height: 100%; }
-    html, body { margin: 0; }
-    /* No scroll: lock the viewport */
-    body { overflow: hidden; background: #0b0b12; color: var(--text); }
+    html, body { height: 100%; margin: 0; background: #0b0b12; color: var(--text); overflow: hidden; }
     canvas { display: block; width: 100vw; height: 100vh; }
   </style>
 </head>
@@ -34,10 +24,13 @@
   <canvas id="stage" width="1920" height="1080"></canvas>
 
   <script>
-    // ---- Config ----
-    const BG_SRC = 'bg-desktop.webp';N_JSON = 'data/burn.json';
+    // ---- Config (FIXED) ----
+    const BG_SRC     = 'bg-desktop.png';   // <== PNG file you added
+    const BURN_JSON  = 'data/burn.json';   // correct var name
     const PRICE_JSON = 'data/price.json';
-    const FIT_MODEconst FIT_MODE = 'cover'; // 'cover' fills the screen (desktop-friendly); use 'contain' to avoid any cropt anchors (relative to canvas height)
+    const FIT_MODE   = 'cover';            // use 'contain' to avoid any crop
+
+    // Layout anchors (relative to canvas height)
     let TOP_OVERLAY_Y = 0.18;   // top metrics Y (18% of height)
     let BOTTOM_PRICE_Y = 0.90;  // bottom price baseline Y
     let UPDATED_Y = 0.66;       // last updated text Y
@@ -68,27 +61,27 @@
         canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      // Tweak anchors for small heights
       if (h < 700) { TOP_OVERLAY_Y = 0.14; UPDATED_Y = 0.60; BOTTOM_PRICE_Y = 0.88; }
       else { TOP_OVERLAY_Y = 0.18; UPDATED_Y = 0.66; BOTTOM_PRICE_Y = 0.90; }
     }
 
-    // Responsive scale helper (keeps texts/cards reasonable on mobile)
+    // Responsive scale helper
     function scaleUnit() {
       const w = canvas.clientWidth, h = canvas.clientHeight;
-      const s = Math.min(w / 1440, h / 900); // base on 1440x900
-      return Math.max(0.65, Math.min(1.15, s)); // clamp
+      const s = Math.min(w / 1440, h / 900);
+      return Math.max(0.65, Math.min(1.15, s));
     }
     const px = (n)=> Math.round(n * scaleUnit());
 
     // Background image
     const bg = new Image();
-    bg.src = BG_SRC;
     let bgReady = false;
-    bg.onload = ()=>{ bgReady = true; draw(); };
+    bg.onload  = ()=>{ bgReady = true; draw(); };
+    bg.onerror = ()=>{ console.error('Failed to load background:', BG_SRC); bgReady = false; draw(); };
+    bg.src = BG_SRC;
 
     // Data state
-    let burn = null; // { totalUi, burns, count, updatedAt? }
+    let burn = null;  // { totalUi, burns, count, updatedAt? }
     let price = null; // { priceUsd, burnTotalUsd, updatedAt? }
 
     // Clickable link hitboxes
@@ -151,29 +144,34 @@
     }
 
     function drawBackground(w, h){
-      if (!bgReady) return;
-      const imgW = bg.naturalWidth || bg.width;
-      const imgH = bg.naturalHeight || bg.height;
-      const scale = (FIT_MODE === 'cover') ? Math.max(w / imgW, h / imgH) : Math.min(w / imgW, h / imgH);
-      const dw = imgW * scale;
-      const dh = imgH * scale;
-      const dx = (w - dw) / 2;
-      const dy = (h - dh) / 2;
-      ctx.drawImage(bg, dx, dy, dw, dh);
-      // Soften edges & improve readability
+      // Base gradient always rendered
       const grad = ctx.createLinearGradient(0,0,0,h);
       grad.addColorStop(0, 'rgba(0,0,0,0.12)');
       grad.addColorStop(1, 'rgba(0,0,0,0.40)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0,0,w,h);
+
+      if (bgReady){
+        const imgW = bg.naturalWidth || bg.width;
+        const imgH = bg.naturalHeight || bg.height;
+        const scale = (FIT_MODE === 'cover') ? Math.max(w / imgW, h / imgH) : Math.min(w / imgW, h / imgH);
+        const dw = imgW * scale;
+        const dh = imgH * scale;
+        const dx = (w - dw) / 2;
+        const dy = (h - dh) / 2;
+        ctx.drawImage(bg, dx, dy, dw, dh);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0,0,w,h);
+      } else {
+        // Fallback solid background if image not loaded
+        ctx.fillStyle = '#0b0b12';
+        ctx.fillRect(0,0,w,h);
+      }
     }
 
     function draw(){
       resizeCanvasToDisplaySize();
       const w = canvas.clientWidth, h = canvas.clientHeight;
-      const s = scaleUnit();
 
-      // Clear
+      // Clear + background
       ctx.clearRect(0,0,w,h);
       drawBackground(w, h);
 
@@ -219,7 +217,7 @@
         text({ str: `Last updated: ${u}`, x: Math.floor(w/2), y: Math.floor(h*UPDATED_Y), size: px(12), color: COLOR.muted, weight: 700, align: 'center' });
       }
 
-      // --- Burns table (compact on mobile) ---
+      // --- Burns table ---
       const rowsAll = (burn?.burns || []);
       const maxRows = w < 520 ? 8 : (w < 900 ? 12 : 20);
       const rows = rowsAll.slice(0, maxRows);
@@ -239,7 +237,7 @@
       const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
       const colLinkW  = tableW - tPad*2 - colIndexW - colQtyW;
 
-      // header titles
+      // headers
       text({ str: '#',               x: tableX+tPad+6,                      y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
       text({ str: 'Amount (BUMPER)', x: tableX+tPad+colIndexW+8,            y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
       text({ str: 'Transaction',     x: tableX+tPad+colIndexW+colQtyW+8,    y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
@@ -265,28 +263,20 @@
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         ctx.fillText(linkStr, tableX+tPad+colIndexW+colQtyW+8, ry+Math.floor(rowH*0.68));
         const m = ctx.measureText(linkStr);
-        linkHitboxes.push({
-          x: tableX+tPad+colIndexW+colQtyW+8,
-          y: ry - Math.floor(rowH*0.2),
-          w: m.width,
-          h: Math.floor(rowH*0.9),
-          url
-        });
+        linkHitboxes.push({ x: tableX+tPad+colIndexW+colQtyW+8, y: ry - Math.floor(rowH*0.2), w: m.width, h: Math.floor(rowH*0.9), url });
       }
     }
 
     // Interactivity for Solscan links
     canvas.addEventListener('mousemove', (e)=>{
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const x = e.clientX - rect.left; const y = e.clientY - rect.top;
       const hit = linkHitboxes.find(b => x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h);
       canvas.style.cursor = hit ? 'pointer' : 'default';
     });
     canvas.addEventListener('click', (e)=>{
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const x = e.clientX - rect.left; const y = e.clientY - rect.top;
       const hit = linkHitboxes.find(b => x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h);
       if (hit && hit.url && hit.url.startsWith('http')) window.open(hit.url, '_blank', 'noopener');
     });
@@ -294,7 +284,6 @@
     // Initial load & timers
     window.addEventListener('resize', draw);
     refreshData();
-    // Optional: refresh data every 5 minutes
     setInterval(refreshData, 5*60*1000);
   </script>
 </body>
