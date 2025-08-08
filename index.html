@@ -24,18 +24,19 @@
   <canvas id="stage" width="1920" height="1080"></canvas>
 
   <script>
-    // ---- Config (FIXED) ----
-    const BG_SRC     = 'bg-desktop.png';   // <== PNG file you added
-    const BURN_JSON  = 'data/burn.json';   // correct var name
+    // ---- Config ----
+    const BG_SRC     = 'bg-desktop.png';       // main image (can be heavy)
+    const THUMB_SRC  = 'bg-thumb.webp';        // lightweight 400–800px preview (optional but recommended)
+    const BURN_JSON  = 'data/burn.json';
     const PRICE_JSON = 'data/price.json';
-    const FIT_MODE   = 'cover';            // use 'contain' to avoid any crop
+    const FIT_MODE   = 'cover'; // 'contain' to avoid any crop
 
     // Layout anchors (relative to canvas height)
-    let TOP_OVERLAY_Y = 0.18;   // top metrics Y (18% of height)
-    let BOTTOM_PRICE_Y = 0.90;  // bottom price baseline Y
-    let UPDATED_Y = 0.66;       // last updated text Y
+    let TOP_OVERLAY_Y   = 0.12; // moved higher
+    let BOTTOM_PRICE_Y  = 0.90;
+    let UPDATED_Y       = 0.74; // moved lower (closer to bottom)
 
-    // Colors from CSS custom props (fallbacks included)
+    // Colors
     const COLOR = {
       text: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#f3f3f3',
       muted: getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#c8c8c8',
@@ -46,9 +47,11 @@
       link: '#9ee8ff'
     };
 
-    // Canvas setup (no scroll)
+    // Canvas
     const canvas = document.getElementById('stage');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     function resizeCanvasToDisplaySize() {
       const dpr = window.devicePixelRatio || 1;
@@ -61,11 +64,10 @@
         canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      if (h < 700) { TOP_OVERLAY_Y = 0.14; UPDATED_Y = 0.60; BOTTOM_PRICE_Y = 0.88; }
-      else { TOP_OVERLAY_Y = 0.18; UPDATED_Y = 0.66; BOTTOM_PRICE_Y = 0.90; }
+      if (h < 700) { TOP_OVERLAY_Y = 0.10; UPDATED_Y = 0.70; BOTTOM_PRICE_Y = 0.88; }
+      else { TOP_OVERLAY_Y = 0.12; UPDATED_Y = 0.74; BOTTOM_PRICE_Y = 0.90; }
     }
 
-    // Responsive scale helper
     function scaleUnit() {
       const w = canvas.clientWidth, h = canvas.clientHeight;
       const s = Math.min(w / 1440, h / 900);
@@ -73,36 +75,58 @@
     }
     const px = (n)=> Math.round(n * scaleUnit());
 
-    // Background image
-    const bg = new Image();
+    // -------- Progressive background loading (blur-up + crossfade) --------
+    let thumbBitmap = null;
+    let mainBitmap  = null;
     let bgReady = false;
-    bg.onload  = ()=>{ bgReady = true; draw(); };
-    bg.onerror = ()=>{ console.error('Failed to load background:', BG_SRC); bgReady = false; draw(); };
-    bg.src = BG_SRC;
+    let fadeAlpha = 0; // 0..1
 
-    // Data state
-    let burn = null;  // { totalUi, burns, count, updatedAt? }
-    let price = null; // { priceUsd, burnTotalUsd, updatedAt? }
-
-    // Clickable link hitboxes
-    let linkHitboxes = []; // { x,y,w,h,url }
-
-    function cacheBust(url){
-      return url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-    }
-    async function loadJson(url){
-      const res = await fetch(cacheBust(url), { cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP '+res.status+' for '+url);
-      return res.json();
-    }
-    async function refreshData(){
+    async function loadBitmap(src){
       try {
-        const [b, p] = await Promise.all([
-          loadJson(BURN_JSON).catch(()=>null),
-          loadJson(PRICE_JSON).catch(()=>null)
-        ]);
-        burn = b; price = p;
-      } catch (e) { console.error(e); }
+        const res = await fetch(src, { cache: 'force-cache' });
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        const blob = await res.blob();
+        return await createImageBitmap(blob, { imageOrientation: 'none', premultiplyAlpha: 'default' });
+      } catch (e) {
+        console.warn('Image load failed:', src, e.message);
+        return null;
+      }
+    }
+
+    // Start loading: thumb first, then main
+    (async function initBackground(){
+      // Try thumb (optional). If missing, this will just be null.
+      thumbBitmap = await loadBitmap(THUMB_SRC);
+      draw(); // paint asap (with blur placeholder if available)
+      // Then main
+      mainBitmap = await loadBitmap(BG_SRC);
+      if (mainBitmap) {
+        bgReady = true;
+        // Smooth crossfade from thumb -> main
+        const start = performance.now();
+        function step(t){
+          const k = Math.min(1, (t - start) / 450); // 450ms fade
+          fadeAlpha = k;
+          draw();
+          if (k < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      } else {
+        draw();
+      }
+    })();
+
+    // Data
+    let burn = null;  // { totalUi, burns, count, updatedAt? }
+    let price = null; // { priceUsd, burnTotalUsd, totalSupplyTokensNum/totalSupplyTokens, updatedAt? }
+
+    let linkHitboxes = [];
+
+    function cacheBust(url){ return url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(); }
+    async function loadJson(url){ const res = await fetch(cacheBust(url), { cache: 'no-store' }); if (!res.ok) throw new Error('HTTP '+res.status+' for '+url); return res.json(); }
+    async function refreshData(){
+      try { const [b, p] = await Promise.all([ loadJson(BURN_JSON).catch(()=>null), loadJson(PRICE_JSON).catch(()=>null) ]); burn = b; price = p; }
+      catch(e){ console.error(e); }
       finally { draw(); }
     }
 
@@ -119,11 +143,8 @@
     }
     function drawGlass(x, y, w, h){
       roundRectPath(x, y, w, h, px(12));
-      ctx.fillStyle = COLOR.glass;
-      ctx.fill();
-      ctx.strokeStyle = COLOR.stroke;
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      ctx.fillStyle = COLOR.glass; ctx.fill();
+      ctx.strokeStyle = COLOR.stroke; ctx.lineWidth = 1; ctx.stroke();
     }
     function text(opts){
       const { str, x, y, size=20, weight=400, color=COLOR.text, align='left', baseline='alphabetic' } = opts;
@@ -132,38 +153,56 @@
       ctx.textAlign = align; ctx.textBaseline = baseline;
       ctx.fillText(str, x, y);
     }
-    function fitNumber(n, maxDp){
+    function fitNumber(n, maxDp){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); const dp = abs >= 1 ? Math.min(maxDp, 2) : Math.min(maxDp, 6); return n.toLocaleString(undefined, { maximumFractionDigits: dp }); }
+    function money(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }); }
+
+    function formatSupplyCompact(n){
       if (typeof n !== 'number' || !isFinite(n)) return '—';
       const abs = Math.abs(n);
-      const dp = abs >= 1 ? Math.min(maxDp, 2) : Math.min(maxDp, 6);
-      return n.toLocaleString(undefined, { maximumFractionDigits: dp });
-    }
-    function money(n){
-      if (typeof n !== 'number' || !isFinite(n)) return '—';
-      return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+      if (abs >= 1e9)  return (n/1e9).toLocaleString(undefined,{ maximumFractionDigits: 3 }) + ' B';
+      if (abs >= 1e6)  return (n/1e6).toLocaleString(undefined,{ maximumFractionDigits: 3 }) + ' M';
+      if (abs >= 1e3)  return (n/1e3).toLocaleString(undefined,{ maximumFractionDigits: 3 }) + ' K';
+      return n.toLocaleString(undefined,{ maximumFractionDigits: 3 });
     }
 
     function drawBackground(w, h){
-      // Base gradient always rendered
+      // Base gradient for readability
       const grad = ctx.createLinearGradient(0,0,0,h);
       grad.addColorStop(0, 'rgba(0,0,0,0.12)');
       grad.addColorStop(1, 'rgba(0,0,0,0.40)');
 
-      if (bgReady){
-        const imgW = bg.naturalWidth || bg.width;
-        const imgH = bg.naturalHeight || bg.height;
+      // Choose which bitmap to show
+      const showThumb = thumbBitmap && (!mainBitmap || fadeAlpha < 1);
+      const bmp = (bgReady && mainBitmap) ? mainBitmap : (thumbBitmap || null);
+
+      if (bmp){
+        const imgW = bmp.width, imgH = bmp.height;
         const scale = (FIT_MODE === 'cover') ? Math.max(w / imgW, h / imgH) : Math.min(w / imgW, h / imgH);
-        const dw = imgW * scale;
-        const dh = imgH * scale;
-        const dx = (w - dw) / 2;
-        const dy = (h - dh) / 2;
-        ctx.drawImage(bg, dx, dy, dw, dh);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,w,h);
+        const dw = imgW * scale; const dh = imgH * scale;
+        const dx = (w - dw) / 2; const dy = (h - dh) / 2;
+
+        if (showThumb && thumbBitmap){
+          // Blur the low-res placeholder
+          ctx.save();
+          ctx.filter = 'blur(8px)';
+          ctx.drawImage(thumbBitmap, dx, dy, dw, dh);
+          ctx.restore();
+        }
+
+        if (bgReady && mainBitmap){
+          // Crossfade main image in
+          ctx.save();
+          ctx.globalAlpha = fadeAlpha || 1;
+          ctx.filter = 'none';
+          ctx.drawImage(mainBitmap, dx, dy, dw, dh);
+          ctx.restore();
+        }
+
+        // Overlay gradient
+        ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
       } else {
-        // Fallback solid background if image not loaded
-        ctx.fillStyle = '#0b0b12';
-        ctx.fillRect(0,0,w,h);
+        // Solid fallback while no image available
+        ctx.fillStyle = '#0b0b12'; ctx.fillRect(0,0,w,h);
       }
     }
 
@@ -171,14 +210,16 @@
       resizeCanvasToDisplaySize();
       const w = canvas.clientWidth, h = canvas.clientHeight;
 
-      // Clear + background
       ctx.clearRect(0,0,w,h);
       drawBackground(w, h);
-
       linkHitboxes = [];
 
-      // --- Top metrics ---
+      // --- Title ---
       const topY = Math.floor(h * TOP_OVERLAY_Y);
+      const title = 'BUMPER BURN';
+      text({ str: title, x: Math.floor(w/2), y: Math.max(px(24), topY - px(28)), size: px(34), weight: 900, align: 'center' });
+
+      // --- Top metrics (two cards) ---
       const cardW = Math.min(Math.max(px(300), Math.floor(w*0.28)), px(520));
       const cardH = px(84);
       const gap   = Math.min(px(24), Math.floor(w*0.04));
@@ -193,11 +234,28 @@
       const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * pxUsd);
 
       const padX = px(14), padY = px(12);
-      text({ str: 'Total burned', x: totalX+padX, y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
-      text({ str: 'USD value',    x: usdX+padX,   y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
+      text({ str: 'Total burned',        x: totalX+padX, y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
+      text({ str: 'Total USD burned',    x: usdX+padX,   y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
 
-      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent, baseline: 'top' });
-      text({ str: money(totalUsd),                 x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
+      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent,  baseline: 'top' });
+      text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
+
+      // --- Supply card (centered below the two) ---
+      const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
+        ? price.totalSupplyTokensNum
+        : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
+      const supplyY = topY + cardH + px(14);
+      const supplyX = Math.floor((w - cardW)/2);
+      drawGlass(supplyX, supplyY, cardW, cardH);
+      text({ str: 'Total supply', x: supplyX+padX, y: supplyY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
+      text({ str: formatSupplyCompact(supplyNum), x: supplyX+padX, y: supplyY+padY+px(32), size: px(22), weight: 800, color: COLOR.text, baseline: 'top' });
+
+      // --- Last updated ---
+      const updated = price?.updatedAt || burn?.updatedAt || null;
+      if (updated){
+        const u = new Date(updated).toLocaleString();
+        text({ str: `Last updated: ${u}`, x: Math.floor(w/2), y: Math.floor(h*UPDATED_Y), size: px(12), color: COLOR.muted, weight: 700, align: 'center' });
+      }
 
       // --- Bottom price ---
       const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
@@ -209,13 +267,6 @@
       const bx = Math.floor((w - bw)/2), by = Math.floor(bottomY - bh/2);
       drawGlass(bx, by, bw, bh);
       text({ str: label, x: Math.floor(w/2), y: bottomY+1, size: px(16), weight: 700, align: 'center', baseline: 'middle' });
-
-      // --- Last updated ---
-      const updated = price?.updatedAt || burn?.updatedAt || null;
-      if (updated){
-        const u = new Date(updated).toLocaleString();
-        text({ str: `Last updated: ${u}`, x: Math.floor(w/2), y: Math.floor(h*UPDATED_Y), size: px(12), color: COLOR.muted, weight: 700, align: 'center' });
-      }
 
       // --- Burns table ---
       const rowsAll = (burn?.burns || []);
@@ -230,58 +281,44 @@
       if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
       drawGlass(tableX, tableY, tableW, tableH);
-
       text({ str: 'Recent burns', x: tableX+tPad, y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
       const colIndexW = px(32);
       const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
       const colLinkW  = tableW - tPad*2 - colIndexW - colQtyW;
 
-      // headers
       text({ str: '#',               x: tableX+tPad+6,                      y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
       text({ str: 'Amount (BUMPER)', x: tableX+tPad+colIndexW+8,            y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
       text({ str: 'Transaction',     x: tableX+tPad+colIndexW+colQtyW+8,    y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
-      // rows & link hitboxes
       linkHitboxes = [];
       for (let i=0; i<Math.max(1, rows.length); i++){
         const ry = tableY + headH + tPad + i*rowH;
-        if (rows.length === 0){
-          text({ str: 'No burns found.', x: tableX+tPad, y: ry, size: px(14), color: COLOR.muted, weight: 700, baseline: 'top' });
-          break;
-        }
-        const row = rows[i];
-        const qty = Number(row.amountUi || 0);
-        const url = row.url || '#';
-
+        if (rows.length === 0){ text({ str: 'No burns found.', x: tableX+tPad, y: ry, size: px(14), color: COLOR.muted, weight: 700, baseline: 'top' }); break; }
+        const row = rows[i]; const qty = Number(row.amountUi || 0); const url = row.url || '#';
         text({ str: String(i+1), x: tableX+tPad+6, y: ry+Math.floor(rowH*0.68), size: px(12), color: COLOR.text, weight: 700 });
         text({ str: fitNumber(qty, 6), x: tableX+tPad+colIndexW+8, y: ry+Math.floor(rowH*0.68), size: px(14), color: COLOR.text, weight: 800 });
-
         const linkStr = 'Open on Solscan';
         ctx.font = `700 ${px(12)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
-        ctx.fillStyle = COLOR.link;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = COLOR.link; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         ctx.fillText(linkStr, tableX+tPad+colIndexW+colQtyW+8, ry+Math.floor(rowH*0.68));
-        const m = ctx.measureText(linkStr);
-        linkHitboxes.push({ x: tableX+tPad+colIndexW+colQtyW+8, y: ry - Math.floor(rowH*0.2), w: m.width, h: Math.floor(rowH*0.9), url });
+        const m2 = ctx.measureText(linkStr);
+        linkHitboxes.push({ x: tableX+tPad+colIndexW+colQtyW+8, y: ry - Math.floor(rowH*0.2), w: m2.width, h: Math.floor(rowH*0.9), url });
       }
     }
 
-    // Interactivity for Solscan links
+    // Interactivity
     canvas.addEventListener('mousemove', (e)=>{
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+      const rect = canvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top;
       const hit = linkHitboxes.find(b => x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h);
       canvas.style.cursor = hit ? 'pointer' : 'default';
     });
     canvas.addEventListener('click', (e)=>{
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+      const rect = canvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top;
       const hit = linkHitboxes.find(b => x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h);
       if (hit && hit.url && hit.url.startsWith('http')) window.open(hit.url, '_blank', 'noopener');
     });
 
-    // Initial load & timers
     window.addEventListener('resize', draw);
     refreshData();
     setInterval(refreshData, 5*60*1000);
