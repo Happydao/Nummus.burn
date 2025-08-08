@@ -44,7 +44,7 @@
     let BOTTOM_PRICE_Y  = 0.90;
 
     // Title placement (top center)
-    let TITLE_TOP_MARGIN_PX = -600;
+    let TITLE_TOP_MARGIN_PX = -80;
 
     // Colors
     const COLOR = {
@@ -127,10 +127,10 @@
         const { data } = octx.getImageData(0,0,iw,ih);
         const alphaAt = (x,y)=> data[(y*iw + x)*4 + 3];
         let top=0, bottom=ih-1, left=0, right=iw-1;
-        for (let y=0; y<ih; y++){ for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 8){ top=y; y=ih; break; } } }
-        for (let y=ih-1; y>=0; y--){ for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 8){ bottom=y; y=-1; break; } } }
-        for (let x=0; x<iw; x++){ for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 8){ left=x; x=iw; break; } } }
-        for (let x=iw-1; x>=0; x--){ for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 8){ right=x; x=-1; break; } } }
+        for (let y=0; y<ih; y++){ for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 32){ top=y; y=ih; break; } } }
+        for (let y=ih-1; y>=0; y--){ for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 32){ bottom=y; y=-1; break; } } }
+        for (let x=0; x<iw; x++){ for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 32){ left=x; x=iw; break; } } }
+        for (let x=iw-1; x>=0; x--){ for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 32){ right=x; x=-1; break; } } }
         titleTrim = { top, bottom: ih-1-bottom, left, right: iw-1-right };
       } catch(e){ console.warn('Title trim failed', e); titleTrim = null; }
       titleReady = true; draw();
@@ -237,29 +237,6 @@
       const uiReady = (!!mainBitmap && !!titleReady && dataReady);
       if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return;
 
-      // --- Title image at top center ---
-      if (titleReady){
-        if (titleTrim){
-          const srcX = titleTrim.left || 0;
-          const srcY = titleTrim.top  || 0;
-          const srcW = titleImg.naturalWidth  - (titleTrim.left||0) - (titleTrim.right||0);
-          const srcH = titleImg.naturalHeight - (titleTrim.top ||0) - (titleTrim.bottom||0);
-          const maxW = Math.min(w * 0.55, px(760));
-          const scale = maxW / srcW;
-          const tw = maxW; const th = srcH * scale;
-          const tx = Math.floor((w - tw) / 2);
-          const ty = px(TITLE_TOP_MARGIN_PX);
-          ctx.drawImage(titleImg, srcX, srcY, srcW, srcH, tx, ty, tw, th);
-        } else {
-          const maxW = Math.min(w * 0.55, px(760));
-          const scale = maxW / titleImg.naturalWidth;
-          const tw = maxW; const th = titleImg.naturalHeight * scale;
-          const tx = Math.floor((w - tw) / 2);
-          const ty = px(TITLE_TOP_MARGIN_PX);
-          ctx.drawImage(titleImg, tx, ty, tw, th);
-        }
-      }
-
       // --- Top metrics (two cards) ---
       const topY = Math.floor(h * TOP_OVERLAY_Y);
       const cardW = Math.min(Math.max(px(300), Math.floor(w*0.28)), px(520));
@@ -281,6 +258,29 @@
 
       text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent,  baseline: 'top' });
       text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
+
+      // --- Title image at top center (draw AFTER cards so it stays on top) ---
+      if (titleReady){
+        if (titleTrim){
+          const srcX = titleTrim.left || 0;
+          const srcY = titleTrim.top  || 0;
+          const srcW = titleImg.naturalWidth  - (titleTrim.left||0) - (titleTrim.right||0);
+          const srcH = titleImg.naturalHeight - (titleTrim.top ||0) - (titleTrim.bottom||0);
+          const maxW = Math.min(w * 0.55, px(760));
+          const scale = maxW / srcW;
+          const tw = maxW; const th = srcH * scale;
+          const tx = Math.floor((w - tw) / 2);
+          const ty = px(TITLE_TOP_MARGIN_PX);
+          ctx.drawImage(titleImg, srcX, srcY, srcW, srcH, tx, ty, tw, th);
+        } else {
+          const maxW = Math.min(w * 0.55, px(760));
+          const scale = maxW / titleImg.naturalWidth;
+          const tw = maxW; const th = titleImg.naturalHeight * scale;
+          const tx = Math.floor((w - tw) / 2);
+          const ty = px(TITLE_TOP_MARGIN_PX);
+          ctx.drawImage(titleImg, tx, ty, tw, th);
+        }
+      }
 
       // --- Compute table layout ---
       const rowsAll = (burn?.burns || []);
