@@ -1,27 +1,30 @@
+# .github/workflows/update-burn.yml
 name: Update burn data
 
 on:
   schedule:
     - cron: "0 0 * * *"   # ogni giorno alle 00:00 UTC
-  workflow_dispatch:       # permette anche l'avvio manuale
+  workflow_dispatch:       # avvio manuale opzionale
+
+# permette al GITHUB_TOKEN di fare push
+permissions:
+  contents: write
 
 jobs:
   update-burn:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install dependencies
-        run: |
-          npm install  # se hai un package.json
-          # Se non hai package.json, puoi saltare questa riga
+      # niente npm install: non serve
 
       - name: Run burn script
         env:
@@ -33,5 +36,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/burn.json
-          git commit -m "Update burn.json [skip ci]" || echo "No changes"
+          git diff --quiet && echo "No changes" || git commit -m "Update burn.json [skip ci]"
           git push
