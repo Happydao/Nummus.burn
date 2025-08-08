@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -26,22 +26,21 @@
 
   <script>
     // ---- Config ----
-    const BG_SRC      = 'bg-desktop.png';
-    const THUMB_SRC   = 'bg-thumb.webp';
+    const BG_SRC      = 'bg-desktop.png';       // main background
+    const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional)
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
-    const FIT_MODE    = 'cover';
+    const FIT_MODE    = 'cover'; // 'contain' to avoid any crop
 
+    // UI only when bg + data
     const DRAW_UI_ONLY_WHEN_READY = true;
     const USE_THUMB_PLACEHOLDER   = false;
 
-    // ---- Card placement (tweak if serve) ----
-    // y sotto al titolo ma sopra l’auto
-    const CARDS_Y_FRAC = 0.20;            // 0.18–0.22 va bene
-    // posizioni orizzontali "sotto BELLA" e "sotto BURN"
-    const CARD1_CENTER_X_FRAC = 0.28;     // Total burned
-    const CARD2_CENTER_X_FRAC = 0.72;     // Total USD burned
+    // ======== CARD POSITIONS (from your selection) ========
+    const CARDS_Y_FRAC = 0.1700;          // y fraction (under title, avoid car)
+    const CARD1_CENTER_X_FRAC = 0.2920;   // Total burned (under BELLA)
+    const CARD2_CENTER_X_FRAC = 0.6720;   // Total USD burned (under BURN)
 
     // Colors
     const COLOR = {
@@ -80,11 +79,11 @@
     }
     const px = (n)=> Math.round(n * scaleUnit());
 
-    // -------- Progressive background loading --------
+    // -------- Progressive background loading (blur-up + crossfade) --------
     let thumbBitmap = null;
     let mainBitmap  = null;
     let bgReady = false;
-    let fadeAlpha = 0;
+    let fadeAlpha = 0; // 0..1
 
     async function loadBitmap(src){
       try {
@@ -98,8 +97,9 @@
       }
     }
 
+    // Load bg: thumb (optional) then main
     (async function initBackground(){
-      thumbBitmap = await loadBitmap(THUMB_SRC);
+      thumbBitmap = await loadBitmap(THUMB_SRC); // may be null
       draw();
       mainBitmap = await loadBitmap(BG_SRC);
       if (mainBitmap) {
@@ -162,6 +162,7 @@
     }
 
     function drawBackground(w, h){
+      // Base gradient for readability
       const grad = ctx.createLinearGradient(0,0,0,h);
       grad.addColorStop(0, 'rgba(0,0,0,0.12)');
       grad.addColorStop(1, 'rgba(0,0,0,0.40)');
@@ -210,7 +211,7 @@
       const label2 = 'Total USD burned';
       const value2 = money(totalUsd);
 
-      // measure card1 (stacked, left-aligned)
+      // misura card 1 (label sinistra, valore sotto)
       ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       const c1LabelW = ctx.measureText(label1).width;
       ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
@@ -218,7 +219,7 @@
       const card1W = Math.ceil(Math.max(c1LabelW, c1ValueW) + padX*2);
       const card1H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      // measure card2 (stacked; label right-aligned)
+      // misura card 2 (label destra, valore sotto)
       ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       const c2LabelW = ctx.measureText(label2).width;
       ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
@@ -226,16 +227,16 @@
       const card2W = Math.ceil(Math.max(c2LabelW, c2ValueW) + padX*2);
       const card2H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      // y pos sotto titolo, evitando auto (max ~33% h)
+      // y pos sotto titolo, cercando di non coprire la macchina (tetto ~34% h)
       let topY = Math.floor(h * CARDS_Y_FRAC);
       const maxSafeY = Math.floor(h * 0.33 - Math.max(card1H, card2H));
       if (topY > maxSafeY) topY = Math.max(px(8), maxSafeY);
 
-      // x pos "sotto BELLA" e "sotto BURN"
+      // x pos fissate dalle frazioni (centro carta)
       let c1cx = Math.floor(w * CARD1_CENTER_X_FRAC);
       let c2cx = Math.floor(w * CARD2_CENTER_X_FRAC);
 
-      // fallback responsive: se schermo stretto avvicina le card al centro
+      // fallback responsive: su schermi stretti centra e mantiene gap
       if (w < 980) {
         const gap = px(16);
         const groupW = card1W + gap + card2W;
@@ -247,12 +248,12 @@
       const card1X = c1cx - Math.floor(card1W/2);
       const card2X = c2cx - Math.floor(card2W/2);
 
-      // draw card1
+      // draw card 1
       drawGlass(card1X, topY, card1W, card1H);
       text({ str: label1, x: card1X + padX, y: topY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
       text({ str: value1, x: card1X + padX, y: topY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
 
-      // draw card2 (label right-aligned, valore sotto)
+      // draw card 2 (label right)
       drawGlass(card2X, topY, card2W, card2H);
       text({ str: label2, x: card2X + card2W - padX, y: topY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'top' });
       text({ str: value2, x: card2X + padX, y: topY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'top' });
@@ -305,6 +306,7 @@
       const colIndexW = px(32);
       const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
 
+      // Rows
       linkHitboxes = [];
       for (let i=0; i<Math.max(1, rows.length); i++){
         const ry = tableY + headH + tPad + i*rowH;
@@ -320,7 +322,7 @@
         linkHitboxes.push({ x: tableX+tPad+colIndexW+colQtyW+8, y: ry - Math.floor(rowH*0.2), w: m2.width, h: Math.floor(rowH*0.9), url });
       }
 
-      // prezzo bottom
+      // --- Bottom price ---
       const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
       const label = `BUMPER price: ${priceStr} USD`;
       ctx.font = `700 ${px(16)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
