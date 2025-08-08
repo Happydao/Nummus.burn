@@ -26,20 +26,22 @@
 
   <script>
     // ---- Config ----
-    const BG_SRC      = 'bg-desktop.png';       // main background
-    const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional)
+    const BG_SRC      = 'bg-desktop.png';
+    const THUMB_SRC   = 'bg-thumb.webp';
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
-    const FIT_MODE    = 'cover'; // 'contain' to avoid any crop
+    const FIT_MODE    = 'cover';
 
-    // UI ready when bg + data
     const DRAW_UI_ONLY_WHEN_READY = true;
     const USE_THUMB_PLACEHOLDER   = false;
 
-    // Layout anchors
-    let TOP_OVERLAY_Y   = 0.25; // y for the two top cards (più in basso)
-    let BOTTOM_PRICE_Y  = 0.90;
+    // ---- Card placement (tweak if serve) ----
+    // y sotto al titolo ma sopra l’auto
+    const CARDS_Y_FRAC = 0.20;            // 0.18–0.22 va bene
+    // posizioni orizzontali "sotto BELLA" e "sotto BURN"
+    const CARD1_CENTER_X_FRAC = 0.28;     // Total burned
+    const CARD2_CENTER_X_FRAC = 0.72;     // Total USD burned
 
     // Colors
     const COLOR = {
@@ -69,7 +71,6 @@
         canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      // posizione fissa: non sovrascrivere TOP_OVERLAY_Y
     }
 
     function scaleUnit() {
@@ -79,11 +80,11 @@
     }
     const px = (n)=> Math.round(n * scaleUnit());
 
-    // -------- Progressive background loading (blur-up + crossfade) --------
+    // -------- Progressive background loading --------
     let thumbBitmap = null;
     let mainBitmap  = null;
     let bgReady = false;
-    let fadeAlpha = 0; // 0..1
+    let fadeAlpha = 0;
 
     async function loadBitmap(src){
       try {
@@ -98,7 +99,7 @@
     }
 
     (async function initBackground(){
-      thumbBitmap = await loadBitmap(THUMB_SRC); // may be null
+      thumbBitmap = await loadBitmap(THUMB_SRC);
       draw();
       mainBitmap = await loadBitmap(BG_SRC);
       if (mainBitmap) {
@@ -189,23 +190,16 @@
       drawBackground(w, h);
       linkHitboxes = [];
 
-      // Wait until bg + data are ready
+      // Ready?
       const dataReady = !!(burn && price);
       const uiReady = (!!mainBitmap && dataReady);
       if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return;
 
-      // --- Top metrics (two cards) ---
-      const topY = Math.floor(h * TOP_OVERLAY_Y);
-
+      // --- Metrics: fit-to-text cards ---
       const labelSize = px(12), labelWeight = 700;
       const valueSize = px(22), valueWeight = 800;
+      const padX = px(14), padY = px(10), vGap = px(6);
 
-      const padX = px(14), padY = px(10);
-      const vGap = px(6);     // spazio fra label e valore (card 1)
-      const innerGap = px(12); // spazio fra valore e label (card 2)
-      const cardsGap = px(16); // spazio fra le due card
-
-      // Prepare strings
       const totalTokens = burn?.totalUi ? Number(burn.totalUi) : 0;
       const pxUsd = price?.priceUsd ? Number(price.priceUsd) : 0;
       const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * pxUsd);
@@ -216,48 +210,54 @@
       const label2 = 'Total USD burned';
       const value2 = money(totalUsd);
 
-      // Measure card 1 (stacked: label above value)
+      // measure card1 (stacked, left-aligned)
       ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
-      const m1LabelW = ctx.measureText(label1).width;
+      const c1LabelW = ctx.measureText(label1).width;
       ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
-      const m1ValueW = ctx.measureText(value1).width;
-
-      const card1W = Math.ceil(Math.max(m1LabelW, m1ValueW) + padX*2);
+      const c1ValueW = ctx.measureText(value1).width;
+      const card1W = Math.ceil(Math.max(c1LabelW, c1ValueW) + padX*2);
       const card1H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      // Measure card 2 (inline: value left, label right)
-      ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
-      const m2ValueW = ctx.measureText(value2).width;
+      // measure card2 (stacked; label right-aligned)
       ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
-      const m2LabelW = ctx.measureText(label2).width;
+      const c2LabelW = ctx.measureText(label2).width;
+      ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+      const c2ValueW = ctx.measureText(value2).width;
+      const card2W = Math.ceil(Math.max(c2LabelW, c2ValueW) + padX*2);
+      const card2H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      const card2W = Math.ceil(m2ValueW + innerGap + m2LabelW + padX*2);
-      const card2H = Math.ceil(padY*2 + Math.max(valueSize, labelSize));
+      // y pos sotto titolo, evitando auto (max ~33% h)
+      let topY = Math.floor(h * CARDS_Y_FRAC);
+      const maxSafeY = Math.floor(h * 0.33 - Math.max(card1H, card2H));
+      if (topY > maxSafeY) topY = Math.max(px(8), maxSafeY);
 
-      // Layout: center the two variable-width cards
-      const groupW = card1W + cardsGap + card2W;
-      const startX = Math.floor((w - groupW) / 2);
+      // x pos "sotto BELLA" e "sotto BURN"
+      let c1cx = Math.floor(w * CARD1_CENTER_X_FRAC);
+      let c2cx = Math.floor(w * CARD2_CENTER_X_FRAC);
 
-      const card1X = startX;
-      const card1Y = topY;
+      // fallback responsive: se schermo stretto avvicina le card al centro
+      if (w < 980) {
+        const gap = px(16);
+        const groupW = card1W + gap + card2W;
+        const startX = Math.floor((w - groupW)/2);
+        c1cx = startX + Math.floor(card1W/2);
+        c2cx = startX + card1W + gap + Math.floor(card2W/2);
+      }
 
-      const card2X = startX + card1W + cardsGap;
-      const card2Y = topY;
+      const card1X = c1cx - Math.floor(card1W/2);
+      const card2X = c2cx - Math.floor(card2W/2);
 
-      // Draw card 1 (stacked)
-      drawGlass(card1X, card1Y, card1W, card1H);
-      text({ str: label1, x: card1X + padX, y: card1Y + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
-      text({ str: value1, x: card1X + padX, y: card1Y + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
+      // draw card1
+      drawGlass(card1X, topY, card1W, card1H);
+      text({ str: label1, x: card1X + padX, y: topY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
+      text({ str: value1, x: card1X + padX, y: topY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
 
-      // Draw card 2 (inline, label right)
-      drawGlass(card2X, card2Y, card2W, card2H);
-      // value left, vertically centered
-      const c2CenterY = card2Y + Math.floor(card2H / 2);
-      text({ str: value2, x: card2X + padX, y: c2CenterY + 1, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'middle' });
-      // label right-aligned
-      text({ str: label2, x: card2X + card2W - padX, y: c2CenterY + 1, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'middle' });
+      // draw card2 (label right-aligned, valore sotto)
+      drawGlass(card2X, topY, card2W, card2H);
+      text({ str: label2, x: card2X + card2W - padX, y: topY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'top' });
+      text({ str: value2, x: card2X + padX, y: topY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'top' });
 
-      // --- Compute table layout ---
+      // --- Table & mini-cards ---
       const rowsAll = (burn?.burns || []);
       const maxRows = w < 520 ? 8 : (w < 900 ? 12 : 20);
       const rows = rowsAll.slice(0, maxRows);
@@ -269,11 +269,8 @@
       let tableY = Math.floor(h * 0.64);
       if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
-      // --- Mini-cards above table: Supply (left) and Last updated (right) ---
-      const miniGap = px(10);
-      const miniH = px(42);
-
-      // Supply
+      // mini: supply
+      const miniGap = px(10), miniH = px(42);
       const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
         ? price.totalSupplyTokensNum
         : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
@@ -286,7 +283,7 @@
       drawGlass(supplyX, supplyY, supplyW, miniH);
       text({ str: supplyStr, x: supplyX + px(12), y: supplyY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
 
-      // Last updated
+      // mini: updated
       const updated = price?.updatedAt || burn?.updatedAt || null;
       const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
       meas = ctx.measureText(updatedStr);
@@ -296,11 +293,10 @@
       drawGlass(updX, updY, updW, miniH);
       text({ str: updatedStr, x: updX + px(12), y: updY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.muted });
 
-      // --- Draw table ---
+      // tabella
       drawGlass(tableX, tableY, tableW, tableH);
       text({ str: 'Recent burns', x: tableX+tPad, y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
-      // Column headers placed lower than the section title
       const headersY = tableY + tPad + px(20);
       text({ str: '#',               x: tableX+tPad+6,                   y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
       text({ str: 'Amount (BUMPER)', x: tableX+tPad+px(32)+8,            y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
@@ -308,9 +304,7 @@
 
       const colIndexW = px(32);
       const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
-      const colLinkW  = tableW - tPad*2 - colIndexW - colQtyW;
 
-      // Rows
       linkHitboxes = [];
       for (let i=0; i<Math.max(1, rows.length); i++){
         const ry = tableY + headH + tPad + i*rowH;
@@ -326,12 +320,12 @@
         linkHitboxes.push({ x: tableX+tPad+colIndexW+colQtyW+8, y: ry - Math.floor(rowH*0.2), w: m2.width, h: Math.floor(rowH*0.9), url });
       }
 
-      // --- Bottom price ---
+      // prezzo bottom
       const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
       const label = `BUMPER price: ${priceStr} USD`;
       ctx.font = `700 ${px(16)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       const m = ctx.measureText(label);
-      const bottomY = Math.floor(h * BOTTOM_PRICE_Y);
+      const bottomY = Math.floor(h * 0.90);
       const pad2 = px(10), bh = px(34), bw = m.width + pad2*2;
       const bx = Math.floor((w - bw)/2), by = Math.floor(bottomY - bh/2);
       drawGlass(bx, by, bw, bh);
