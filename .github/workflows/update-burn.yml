@@ -1,8 +1,9 @@
+# .github/workflows/update-burn.yml
 name: Update burn & price
 
 on:
   schedule:
-    - cron: "0 0 * * *"   # ogni 24h alle 00:00 UTC
+    - cron: "0 0 * * *"   # ogni giorno alle 00:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -21,15 +22,6 @@ jobs:
         with:
           node-version: 18
 
-      - name: Pre-run ls
-        run: |
-          echo "--- repo tree ---"
-          ls -la
-          echo "--- scripts ---"
-          ls -la scripts || true
-          echo "--- data (prima) ---"
-          ls -la data || true
-
       - name: Run burn script
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
@@ -40,12 +32,10 @@ jobs:
 
       - name: Show outputs
         run: |
-          echo "=== data/burn.json ==="
-          sed -n '1,200p' data/burn.json
-          echo "=== data/price.json ==="
-          sed -n '1,200p' data/price.json
+          echo "=== data/burn.json ==="; sed -n '1,200p' data/burn.json || true
+          echo "=== data/price.json ==="; sed -n '1,200p' data/price.json || true
 
-      - name: Commit & push data
+      - name: Commit & push
         run: |
           git add data/burn.json data/price.json
           if git diff --cached --quiet; then
