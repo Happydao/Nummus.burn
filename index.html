@@ -2,8 +2,8 @@
 <html lang="it">
 <head>
   <meta charset="utf-8" />
-  <!-- Forza layout desktop su mobile + consente pinch-zoom -->
-  <meta name="viewport" content="width=1440, user-scalable=yes, maximum-scale=8" />
+  <!-- Manteniamo viewport standard. Il layout desktop resta quello che hai scelto. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>BUMPER Burn — Live Dashboard</title>
   <meta name="description" content="Live burn dashboard for BUMPER on Solana: total burned, USD value, price, and recent burn transactions." />
   <link rel="preload" as="image" href="bg-desktop.png">
@@ -18,7 +18,6 @@
       --accent2: #ff5fd2;
     }
     *{ box-sizing: border-box; }
-    /* Manteniamo il canvas a schermo pieno del viewport "desktop" */
     html, body { height: 100%; margin: 0; background: #0b0b12; color: var(--text); overflow: hidden; }
     canvas { display: block; width: 100vw; height: 100vh; }
   </style>
@@ -28,21 +27,27 @@
 
   <script>
     // ---- Config ----
-    const BG_SRC      = 'bg-desktop.png'; // main background
-    const THUMB_SRC   = 'bg-thumb.webp';  // small preview (optional)
+    const BG_SRC      = 'bg-desktop.png';       // main background
+    const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional)
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
-    const FIT_MODE    = 'cover'; // 'contain' to avoid any crop
+    const FIT_MODE    = 'cover'; // DESKTOP: resta cover (come volevi)
 
     // UI only when bg + data
     const DRAW_UI_ONLY_WHEN_READY = true;
     const USE_THUMB_PLACEHOLDER   = false;
 
-    // ======== CARD POSITIONS (fisse come da tue scelte) ========
-    const CARDS_Y_FRAC = 0.1350;          // y fraction (sotto titolo, evita auto)
-    const CARD1_CENTER_X_FRAC = 0.3220;   // Total burned (sotto BELLA)
-    const CARD2_CENTER_X_FRAC = 0.6520;   // Total USD burned (sotto BURN)
+    // ======== DESKTOP positions (come da tue scelte) ========
+    const CARDS_Y_FRAC = 0.1350;
+    const CARD1_CENTER_X_FRAC = 0.3220;
+    const CARD2_CENTER_X_FRAC = 0.6520;
+
+    // ======== SOLO MOBILE ========
+    const MOBILE_BREAKPOINT   = 900;     // < 900px consideriamo mobile
+    const MOBILE_CARDS_Y_FRAC = 0.28;    // card più basse su mobile (aumenta per più in basso)
+    const MOBILE_BG_MODE      = 'contain'; // su mobile mostriamo più scena
+    const MOBILE_BG_SHRINK    = 0.90;    // 90% della dimensione ideale -> ancora più area visibile
 
     // Colors
     const COLOR = {
@@ -62,10 +67,7 @@
     ctx.imageSmoothingQuality = 'high';
 
     function resizeCanvasToDisplaySize() {
-      // Clampa il DPR per non esplodere su telefoni ad alto DPI
-      const MAX_DPR = 2;
-      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // limite per performance
       const w = Math.floor(window.innerWidth);
       const h = Math.floor(window.innerHeight);
       if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
@@ -166,7 +168,7 @@
       return n.toLocaleString(undefined,{ maximumFractionDigits: 3 });
     }
 
-    function drawBackground(w, h){
+    function drawBackground(w, h, isMobile){
       // Base gradient for readability
       const grad = ctx.createLinearGradient(0,0,0,h);
       grad.addColorStop(0, 'rgba(0,0,0,0.12)');
@@ -175,13 +177,18 @@
       const showThumb = USE_THUMB_PLACEHOLDER && thumbBitmap && (!mainBitmap || fadeAlpha < 1);
       const bmp = (bgReady && mainBitmap) ? mainBitmap : (showThumb ? thumbBitmap : null);
 
+      // Scegli modalità di fit solo su mobile
+      const mode = isMobile ? MOBILE_BG_MODE : FIT_MODE;
+
       if (bmp){
         const imgW = bmp.width, imgH = bmp.height;
-        const scale = (FIT_MODE === 'cover') ? Math.max(w / imgW, h / imgH) : Math.min(w / imgW, h / imgH);
+        let scale = (mode === 'cover') ? Math.max(w / imgW, h / imgH) : Math.min(w / imgW, h / imgH);
+        if (isMobile) scale *= MOBILE_BG_SHRINK; // riduci un po' per mostrare più scena
         const dw = imgW * scale; const dh = imgH * scale;
         const dx = (w - dw) / 2; const dy = (h - dh) / 2;
         if (showThumb){ ctx.save(); ctx.filter = 'blur(8px)'; ctx.drawImage(bmp, dx, dy, dw, dh); ctx.restore(); }
         else { ctx.drawImage(bmp, dx, dy, dw, dh); }
+        // gradient sopra, per leggibilità
         ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
       } else {
         ctx.fillStyle = '#0b0b12'; ctx.fillRect(0,0,w,h);
@@ -191,9 +198,10 @@
     function draw(){
       resizeCanvasToDisplaySize();
       const w = canvas.clientWidth, h = canvas.clientHeight;
+      const isMobile = w < MOBILE_BREAKPOINT;
 
       ctx.clearRect(0,0,w,h);
-      drawBackground(w, h);
+      drawBackground(w, h, isMobile);
       linkHitboxes = [];
 
       // Ready?
@@ -216,7 +224,7 @@
       const label2 = 'Total USD burned';
       const value2 = money(totalUsd);
 
-      // misura card 1 (label sinistra, valore sotto)
+      // misura card 1
       ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       const c1LabelW = ctx.measureText(label1).width;
       ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
@@ -224,7 +232,7 @@
       const card1W = Math.ceil(Math.max(c1LabelW, c1ValueW) + padX*2);
       const card1H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      // misura card 2 (label destra, valore sotto)
+      // misura card 2
       ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       const c2LabelW = ctx.measureText(label2).width;
       ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
@@ -232,15 +240,18 @@
       const card2W = Math.ceil(Math.max(c2LabelW, c2ValueW) + padX*2);
       const card2H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      // y pos sotto titolo, cercando di non coprire la macchina (tetto ~33% h)
-      let topY = Math.floor(h * CARDS_Y_FRAC);
-      const maxSafeY = Math.floor(h * 0.33 - Math.max(card1H, card2H));
-      if (topY > maxSafeY) topY = Math.max(px(8), maxSafeY);
+      // y: desktop = tue frazioni; mobile = più in basso
+      let topY = Math.floor(h * (isMobile ? MOBILE_CARDS_Y_FRAC : CARDS_Y_FRAC));
 
-      // x pos fissate dalle frazioni (centro carta) — NESSUN fallback mobile
+      // su desktop manteniamo la protezione per non coprire l'auto; su mobile la disattivo
+      if (!isMobile) {
+        const maxSafeY = Math.floor(h * 0.33 - Math.max(card1H, card2H));
+        if (topY > maxSafeY) topY = Math.max(px(8), maxSafeY);
+      }
+
+      // x: identiche anche su mobile (restano sotto BELLA/BURN come su desktop)
       const c1cx = Math.floor(w * CARD1_CENTER_X_FRAC);
       const c2cx = Math.floor(w * CARD2_CENTER_X_FRAC);
-
       const card1X = c1cx - Math.floor(card1W/2);
       const card2X = c2cx - Math.floor(card2W/2);
 
@@ -256,19 +267,18 @@
 
       // --- Table & mini-cards ---
       const rowsAll = (burn?.burns || []);
+      const maxRows = w < 520 ? 8 : (w < 900 ? 12 : 20);
+      const rows = rowsAll.slice(0, maxRows);
+
       const tableW = Math.min(Math.max(px(420), Math.floor(w*0.92)), px(1000));
       const rowH   = px(24), headH = px(46), tPad = px(10);
-
-      const tableX = Math.floor((w - tableW)/2);
-      let tableY = Math.floor(h * 0.64);
-      const maxRowsBySpace = Math.floor(((h - 12) - tableY - (tPad*2 + headH)) / rowH);
-      const rows = rowsAll.slice(0, Math.max(1, Math.min(20, maxRowsBySpace)));
-
       const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2;
+      let tableX = Math.floor((w - tableW)/2);
+      let tableY = Math.floor(h * 0.64);
+      if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
-      // mini: supply (left) e updated (right)
+      // mini: supply
       const miniGap = px(10), miniH = px(42);
-
       const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
         ? price.totalSupplyTokensNum
         : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
@@ -281,6 +291,7 @@
       drawGlass(supplyX, supplyY, supplyW, miniH);
       text({ str: supplyStr, x: supplyX + px(12), y: supplyY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
 
+      // mini: updated
       const updated = price?.updatedAt || burn?.updatedAt || null;
       const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
       meas = ctx.measureText(updatedStr);
@@ -302,6 +313,7 @@
       const colIndexW = px(32);
       const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
 
+      // Rows
       linkHitboxes = [];
       for (let i=0; i<Math.max(1, rows.length); i++){
         const ry = tableY + headH + tPad + i*rowH;
