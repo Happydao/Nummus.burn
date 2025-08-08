@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>BUMPER Burn — Live Dashboard</title>
   <meta name="description" content="Live burn dashboard for BUMPER on Solana: total burned, USD value, price, and recent burn transactions." />
-  <link rel="preload" as="image" href="sfondo.png">
+  <link rel="preload" as="image" href="bg-desktop.webp">
   <style>
     :root{
       /* Positioning tweaks for overlays relative to the background image */
@@ -35,12 +35,9 @@
 
   <script>
     // ---- Config ----
-    const BG_SRC = 'sfondo.png';
-    const BURN_JSON = 'data/burn.json';
+    const BG_SRC = 'bg-desktop.webp';N_JSON = 'data/burn.json';
     const PRICE_JSON = 'data/price.json';
-    const FIT_MODE = 'contain'; // 'contain' shows the whole image (no ugly crop); 'cover' fills but crops
-
-    // Layout anchors (relative to canvas height)
+    const FIT_MODEconst FIT_MODE = 'cover'; // 'cover' fills the screen (desktop-friendly); use 'contain' to avoid any cropt anchors (relative to canvas height)
     let TOP_OVERLAY_Y = 0.18;   // top metrics Y (18% of height)
     let BOTTOM_PRICE_Y = 0.90;  // bottom price baseline Y
     let UPDATED_Y = 0.66;       // last updated text Y
