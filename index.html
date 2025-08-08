@@ -44,7 +44,12 @@
 
     // ======== SOLO MOBILE (solo Y più in basso; X identiche al desktop) ========
     const MOBILE_BREAKPOINT   = 900;      // < 900px = mobile
-    const MOBILE_CARDS_Y_FRAC = 0.32;     // alza/abbassa le card SOLO su mobile (es. 0.30 più giù, 0.24 più su)
+    const MOBILE_CARDS_Y_FRAC = 0.32;     // alza/abbassa le card SOLO su mobile
+
+    // ======== Link targets ========
+    const GITHUB_REPO_URL    = 'https://github.com/Happydao/Bumper.burn';
+    const BURN_ADDRESS       = '5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE';
+    const BURN_SOLSCAN_URL   = 'https://solscan.io/account/' + BURN_ADDRESS;
 
     // Colors
     const COLOR = {
@@ -164,6 +169,7 @@
       if (abs >= 1e3)  return (n/1e3).toLocaleString(undefined,{ maximumFractionDigits: 3 });
       return n.toLocaleString(undefined,{ maximumFractionDigits: 3 });
     }
+    function shorten(addr){ return (addr && addr.length>14) ? addr.slice(0,8)+'…'+addr.slice(-6) : addr; }
 
     function drawBackground(w, h){
       // Base gradient for readability
@@ -196,7 +202,21 @@
       drawBackground(w, h);
       linkHitboxes = [];
 
-      // Pronto?
+      // --- Pulsante GitHub in alto a destra ---
+      (function drawGitHubButton(){
+        const label = 'GitHub';
+        const padX = px(10), padY = px(6);
+        ctx.font = `700 ${px(12)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+        const tw = ctx.measureText(label).width;
+        const bw = Math.ceil(tw + padX*2), bh = Math.ceil(px(28));
+        const bx = Math.floor(w - bw - px(12));
+        const by = Math.floor(px(12));
+        drawGlass(bx, by, bw, bh);
+        text({ str: label, x: bx + Math.floor(bw/2), y: by + Math.floor(bh/2)+1, size: px(12), weight: 700, color: COLOR.text, align: 'center', baseline: 'middle' });
+        linkHitboxes.push({ x: bx, y: by, w: bw, h: bh, url: GITHUB_REPO_URL });
+      })();
+
+      // Pronto dati?
       const dataReady = !!(burn && price);
       const uiReady = (!!mainBitmap && dataReady);
       if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return;
@@ -269,7 +289,7 @@
       let tableY = Math.floor(h * 0.64);
       if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
-      // mini: supply
+      // mini: supply (sx) e updated (dx)
       const miniGap = px(10), miniH = px(42);
       const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
         ? price.totalSupplyTokensNum
@@ -283,7 +303,6 @@
       drawGlass(supplyX, supplyY, supplyW, miniH);
       text({ str: supplyStr, x: supplyX + px(12), y: supplyY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
 
-      // mini: updated
       const updated = price?.updatedAt || burn?.updatedAt || null;
       const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
       meas = ctx.measureText(updatedStr);
@@ -293,7 +312,43 @@
       drawGlass(updX, updY, updW, miniH);
       text({ str: updatedStr, x: updX + px(12), y: updY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.muted });
 
-      // tabella
+      // --- Burn address link centrato tra le due mini-card ---
+      (function drawBurnCenterLink(){
+        const label = `Burn address: ${shorten(BURN_ADDRESS)}`;
+        ctx.font = `700 ${px(12)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+        const tw = ctx.measureText(label).width;
+
+        const gapLeft  = supplyX + supplyW + px(12);
+        const gapRight = updX - px(12);
+        const gapWidth = gapRight - gapLeft;
+
+        let linkX, linkY;
+
+        if (tw <= gapWidth) {
+          // sta nel gap tra le due mini-card
+          linkX = Math.floor(tableX + tableW/2);
+          linkY = supplyY + Math.floor(miniH/2) + 1;
+        } else {
+          // non ci sta: disegna una riga sopra le mini-card
+          linkX = Math.floor(tableX + tableW/2);
+          linkY = supplyY - px(10);
+        }
+
+        // disegno il testo link centrato
+        ctx.fillStyle = COLOR.link;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, linkX, linkY);
+
+        // calcolo hitbox per click
+        const hitW = Math.ceil(tw);
+        const hitH = px(18);
+        const hx = Math.floor(linkX - hitW/2);
+        const hy = Math.floor(linkY - hitH/2);
+        linkHitboxes.push({ x: hx, y: hy, w: hitW, h: hitH, url: BURN_SOLSCAN_URL });
+      })();
+
+      // --- Tabella burns ---
       drawGlass(tableX, tableY, tableW, tableH);
       text({ str: 'Recent burns', x: tableX+tPad, y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
@@ -306,7 +361,6 @@
       const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
 
       // Rows
-      linkHitboxes = [];
       for (let i=0; i<Math.max(1, rows.length); i++){
         const ry = tableY + headH + tPad + i*rowH;
         if (rows.length === 0){ text({ str: 'No burns found.', x: tableX+tPad, y: ry, size: px(14), color: COLOR.muted, weight: 700, baseline: 'top' }); break; }
