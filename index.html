@@ -33,12 +33,12 @@
     const PRICE_JSON  = 'data/price.json';
     const FIT_MODE    = 'cover'; // 'contain' to avoid any crop
 
-    // Draw UI only when everything is ready (bg + data)
+    // UI ready when bg + data
     const DRAW_UI_ONLY_WHEN_READY = true;
-    const USE_THUMB_PLACEHOLDER   = false; // if true, shows blurred thumb before HD bg
+    const USE_THUMB_PLACEHOLDER   = false;
 
     // Layout anchors
-    let TOP_OVERLAY_Y   = 0.15; // y for the two top cards
+    let TOP_OVERLAY_Y   = 0.25; // y for the two top cards (più in basso)
     let BOTTOM_PRICE_Y  = 0.90;
 
     // Colors
@@ -69,7 +69,7 @@
         canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      TOP_OVERLAY_Y = (h < 700) ? 0.10 : 0.12;
+      // posizione fissa: non sovrascrivere TOP_OVERLAY_Y
     }
 
     function scaleUnit() {
@@ -97,7 +97,6 @@
       }
     }
 
-    // Load bg: thumb (optional) then main
     (async function initBackground(){
       thumbBitmap = await loadBitmap(THUMB_SRC); // may be null
       draw();
@@ -162,7 +161,6 @@
     }
 
     function drawBackground(w, h){
-      // Base gradient for readability
       const grad = ctx.createLinearGradient(0,0,0,h);
       grad.addColorStop(0, 'rgba(0,0,0,0.12)');
       grad.addColorStop(1, 'rgba(0,0,0,0.40)');
@@ -198,25 +196,66 @@
 
       // --- Top metrics (two cards) ---
       const topY = Math.floor(h * TOP_OVERLAY_Y);
-      const cardW = Math.min(Math.max(px(300), Math.floor(w*0.28)), px(520));
-      const cardH = px(84);
-      const gap   = Math.min(px(24), Math.floor(w*0.04));
-      const totalX = Math.floor((w - (cardW*2 + gap)) / 2);
-      const usdX   = totalX + cardW + gap;
 
-      drawGlass(totalX, topY, cardW, cardH);
-      drawGlass(usdX,  topY, cardW, cardH);
+      const labelSize = px(12), labelWeight = 700;
+      const valueSize = px(22), valueWeight = 800;
 
+      const padX = px(14), padY = px(10);
+      const vGap = px(6);     // spazio fra label e valore (card 1)
+      const innerGap = px(12); // spazio fra valore e label (card 2)
+      const cardsGap = px(16); // spazio fra le due card
+
+      // Prepare strings
       const totalTokens = burn?.totalUi ? Number(burn.totalUi) : 0;
       const pxUsd = price?.priceUsd ? Number(price.priceUsd) : 0;
       const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * pxUsd);
 
-      const padX = px(14), padY = px(12);
-      text({ str: 'Total burned',        x: totalX+padX, y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
-      text({ str: 'Total USD burned',    x: usdX+padX,   y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
+      const label1 = 'Total burned';
+      const value1 = `${fitNumber(totalTokens, 6)} BUMPER`;
 
-      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent,  baseline: 'top' });
-      text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
+      const label2 = 'Total USD burned';
+      const value2 = money(totalUsd);
+
+      // Measure card 1 (stacked: label above value)
+      ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+      const m1LabelW = ctx.measureText(label1).width;
+      ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+      const m1ValueW = ctx.measureText(value1).width;
+
+      const card1W = Math.ceil(Math.max(m1LabelW, m1ValueW) + padX*2);
+      const card1H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
+
+      // Measure card 2 (inline: value left, label right)
+      ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+      const m2ValueW = ctx.measureText(value2).width;
+      ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+      const m2LabelW = ctx.measureText(label2).width;
+
+      const card2W = Math.ceil(m2ValueW + innerGap + m2LabelW + padX*2);
+      const card2H = Math.ceil(padY*2 + Math.max(valueSize, labelSize));
+
+      // Layout: center the two variable-width cards
+      const groupW = card1W + cardsGap + card2W;
+      const startX = Math.floor((w - groupW) / 2);
+
+      const card1X = startX;
+      const card1Y = topY;
+
+      const card2X = startX + card1W + cardsGap;
+      const card2Y = topY;
+
+      // Draw card 1 (stacked)
+      drawGlass(card1X, card1Y, card1W, card1H);
+      text({ str: label1, x: card1X + padX, y: card1Y + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
+      text({ str: value1, x: card1X + padX, y: card1Y + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
+
+      // Draw card 2 (inline, label right)
+      drawGlass(card2X, card2Y, card2W, card2H);
+      // value left, vertically centered
+      const c2CenterY = card2Y + Math.floor(card2H / 2);
+      text({ str: value2, x: card2X + padX, y: c2CenterY + 1, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'middle' });
+      // label right-aligned
+      text({ str: label2, x: card2X + card2W - padX, y: c2CenterY + 1, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'middle' });
 
       // --- Compute table layout ---
       const rowsAll = (burn?.burns || []);
@@ -227,7 +266,7 @@
       const rowH   = px(24), headH = px(46), tPad = px(10);
       const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2;
       let tableX = Math.floor((w - tableW)/2);
-      let tableY = Math.floor(h * 0.64); // just below the car
+      let tableY = Math.floor(h * 0.64);
       if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
       // --- Mini-cards above table: Supply (left) and Last updated (right) ---
