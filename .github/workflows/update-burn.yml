@@ -3,7 +3,7 @@ name: Update burn & price
 
 on:
   schedule:
-    - cron: "0 0 * * *"   # ogni giorno alle 00:00 UTC
+    - cron: "0 0 * * *"   # ogni 24h alle 00:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -27,8 +27,9 @@ jobs:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
         run: node scripts/burn.js
 
-      - name: Run price script
+      - name: Run price script (tollerante)
         run: node scripts/price.js
+        continue-on-error: true
 
       - name: Show outputs
         run: |
