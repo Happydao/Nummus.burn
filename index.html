@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BUMPER Burn — Live</title>
+  <meta name="description" content="Dashboard burn BUMPER su Solana: totale bruciato, valore in USD, prezzo, e lista transazioni." />
+  <link rel="preload" as="image" href="sfondo.png">
+  <style>
+    :root{
+      /* 💡 Regola queste per posizionare gli overlay rispetto allo sfondo */
+      --top-overlay-top: 18vh;      /* tra l’auto e le mani dei legionari */
+      --top-overlay-gap: 2rem;      /* spazio tra i due box (token e USD) */
+      --bottom-overlay-bottom: 8vh; /* “sotto i piedi dei geki” */
+      --content-max: 1200px;
+
+      --glass-bg: rgba(0,0,0,0.38);
+      --glass-border: rgba(255,255,255,0.25);
+      --text: #f3f3f3;
+      --muted: #c8c8c8;
+      --accent: #78ffb2;   /* verde “solana-ish” */
+      --accent2: #ff5fd2;  /* magenta neon */
+    }
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      color: var(--text);
+      font: 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: #0b0b12 url("sfondo.png") center top / cover no-repeat fixed;
+    }
+    .hero{
+      position: relative;
+      width: 100%;
+      min-height: 100vh; /* pieno schermo */
+      /* leggero gradiente per leggibilità */
+      background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.55));
+      backdrop-filter: saturate(110%);
+    }
+    .wrap{
+      width: 100%;
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: 1rem clamp(12px, 2vw, 24px);
+    }
+    .top-metrics{
+      position: absolute;
+      left: 50%;
+      top: var(--top-overlay-top);
+      transform: translateX(-50%);
+      display: flex;
+      gap: var(--top-overlay-gap);
+      align-items: stretch;
+      flex-wrap: wrap;
+      padding: 0 1rem;
+      width: min(100%, var(--content-max));
+      justify-content: center;
+    }
+    .metric{
+      min-width: 260px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+    }
+    .metric .label{
+      font-size: 0.9rem;
+      letter-spacing: .03em;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .metric .value{
+      display: flex;
+      align-items: baseline;
+      gap: .5rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .value .big{
+      font-size: clamp(1.6rem, 3.2vw, 3rem);
+    }
+    .value .unit{
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    .value.accent .big { color: var(--accent); }
+    .value.accent2 .big { color: var(--accent2); }
+
+    .bottom-price{
+      position: absolute;
+      left: 50%;
+      bottom: var(--bottom-overlay-bottom);
+      transform: translateX(-50%);
+      padding: 8px 14px;
+      border-radius: 12px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+      font-weight: 600;
+      font-size: clamp(1rem, 2vw, 1.25rem);
+    }
+
+    .after-hero{
+      margin-top: max(60vh, 640px); /* spazio per la hero */
+    }
+    .last-updated{
+      text-align: center;
+      color: var(--muted);
+      margin: 1.2rem 0 0.6rem;
+      font-size: 0.95rem;
+    }
+
+    .glass-card{
+      margin: 0 auto 60px;
+      max-width: var(--content-max);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+    .glass-card header{
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .glass-card header h2{
+      margin: 0;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+    .glass-card .table{
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .glass-card .table th,
+    .glass-card .table td{
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    .glass-card .table th{ color: var(--muted); font-weight: 600; }
+    .glass-card .table tr:hover td{ background: rgba(255,255,255,0.03); }
+    a{
+      color: #9ee8ff;
+      text-decoration: none;
+    }
+    a:hover{ text-decoration: underline; }
+
+    @media (max-width: 720px){
+      .top-metrics{ gap: 1rem; }
+      .after-hero{ margin-top: 70vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <!-- METRICHE IN ALTO: Totale burnato e Valore in $ -->
+    <div class="top-metrics">
+      <div class="metric" id="m-total">
+        <div class="label">Totale burnato</div>
+        <div class="value accent">
+          <span class="big" id="totalTokens">—</span>
+          <span class="unit">BUMPER</span>
+        </div>
+      </div>
+      <div class="metric" id="m-usd">
+        <div class="label">Valore in dollari</div>
+        <div class="value accent2">
+          <span class="big" id="totalUsd">—</span>
+          <span class="unit">USD</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREZZO IN BASSO: “sotto i piedi dei geki” -->
+    <div class="bottom-price">
+      BUMPER price: <span id="price">—</span> USD
+    </div>
+  </div>
+
+  <div class="after-hero wrap">
+    <div class="last-updated">
+      Aggiornato: <span id="updatedAt">—</span>
+    </div>
+
+    <!-- LISTA BURN (tabella trasparente) -->
+    <div class="glass-card">
+      <header>
+        <h2>Burn recenti</h2>
+        <div id="countBadge"></div>
+      </header>
+      <table class="table" id="burnTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Quantità (BUMPER)</th>
+            <th>Transazione</th>
+          </tr>
+        </thead>
+        <tbody id="burnTbody">
+          <tr><td colspan="3">Caricamento…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Config
+    const BURN_JSON = 'data/burn.json';
+    const PRICE_JSON = 'data/price.json';
+    const MAX_ROWS = 50; // quante tx mostrare
+
+    const el = (id)=>document.getElementById(id);
+
+    const fmt = {
+      num(n, dp=2){
+        if (n === null || n === undefined || Number.isNaN(n)) return '—';
+        return n.toLocaleString(undefined, { maximumFractionDigits: dp });
+      },
+      big(n){ // per token: fino a 6 decimali se servono
+        if (n === null || n === undefined || Number.isNaN(n)) return '—';
+        const abs = Math.abs(n);
+        const dp = abs >= 1 ? 2 : 6;
+        return n.toLocaleString(undefined, { maximumFractionDigits: dp });
+      },
+      money(n){
+        if (n === null || n === undefined || Number.isNaN(n)) return '—';
+        return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+      },
+      date(iso){
+        try { return new Date(iso).toLocaleString(); } catch { return '—'; }
+      }
+    };
+
+    async function loadJson(url){
+      // cache-bust per evitare caching di Pages/CDN
+      const u = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      const res = await fetch(u, { cache: 'no-store' });
+      if (!res.ok) throw new Error(url + ' → HTTP ' + res.status);
+      return res.json();
+    }
+
+    async function render(){
+      const [burn, price] = await Promise.all([
+        loadJson(BURN_JSON).catch(()=>null),
+        loadJson(PRICE_JSON).catch(()=>null)
+      ]);
+
+      // Totali
+      let totalTokens = 0, totalUsd = 0, priceUsd = 0;
+      let updatedAt = null;
+
+      if (burn && burn.totalUi){
+        totalTokens = Number(burn.totalUi) || 0;
+      }
+      if (price){
+        priceUsd = Number(price.priceUsd) || 0;
+        // se lo script price ha già calcolato burnTotalUsd/burnTotalTokens, usali
+        if (price.burnTotalUsd != null && !Number.isNaN(Number(price.burnTotalUsd))) {
+          totalUsd = Number(price.burnTotalUsd);
+        } else {
+          totalUsd = totalTokens * priceUsd;
+        }
+        updatedAt = price.updatedAt || burn.updatedAt || null;
+      } else {
+        totalUsd = totalTokens * priceUsd;
+        updatedAt = burn?.updatedAt || null;
+      }
+
+      el('totalTokens').textContent = fmt.big(totalTokens);
+      el('totalUsd').textContent    = fmt.money(totalUsd);
+      el('price').textContent       = fmt.num(priceUsd, 6);
+      el('updatedAt').textContent   = updatedAt ? fmt.date(updatedAt) : '—';
+
+      // Badge conteggio
+      if (burn && Array.isArray(burn.burns)) {
+        el('countBadge').textContent = `${burn.count ?? burn.burns.length} burn`;
+      } else {
+        el('countBadge').textContent = '';
+      }
+
+      // Tabella burn
+      const tbody = el('burnTbody');
+      tbody.innerHTML = '';
+      const rows = (burn?.burns ?? []).slice(0, MAX_ROWS);
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3">Nessun burn trovato.</td></tr>';
+      } else {
+        rows.forEach((b, i)=>{
+          const tr = document.createElement('tr');
+          const idx = document.createElement('td');
+          const qty = document.createElement('td');
+          const link = document.createElement('td');
+
+          idx.textContent = i + 1;
+          qty.textContent = fmt.big(Number(b.amountUi || 0));
+
+          const a = document.createElement('a');
+          a.href = b.url || '#';
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = 'Apri su Solscan';
+          link.appendChild(a);
+
+          tr.appendChild(idx);
+          tr.appendChild(qty);
+          tr.appendChild(link);
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    // prima render al load
+    render().catch(err=>{
+      console.error(err);
+      el('burnTbody').innerHTML = '<tr><td colspan="3">Errore nel caricamento.</td></tr>';
+    });
+
+    // refresh automatico ogni 5 minuti (opzionale)
+    setInterval(()=>render().catch(console.error), 5 * 60 * 1000);
+  </script>
+</body>
+</html>
