@@ -1,2 +1,4 @@
 # Bumper.burn
-Script per tracciare e visualizzare i burn del token BUMPER su Solana
+Script to track and visualize $BUMPER token burns on Solana
+
+Address for the burn: https://solscan.io/account/5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE
