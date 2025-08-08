@@ -1,0 +1,37 @@
+name: Update burn data
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # ogni giorno alle 00:00 UTC
+  workflow_dispatch:       # permette anche l'avvio manuale
+
+jobs:
+  update-burn:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          npm install  # se hai un package.json
+          # Se non hai package.json, puoi saltare questa riga
+
+      - name: Run burn script
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: node scripts/burn.js
+
+      - name: Commit and push updated burn.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/burn.json
+          git commit -m "Update burn.json [skip ci]" || echo "No changes"
+          git push
