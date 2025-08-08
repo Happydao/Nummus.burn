@@ -41,7 +41,9 @@
     const USE_THUMB_PLACEHOLDER   = false; // if true, shows blurred thumb before HD bg
 
     // Layout anchors
-    let TOP_OVERLAY_Y   = 0.12; // y for the two top cards
+    let TOP_OVERLAY_Y   = 0.15; // baseline % height for top cards (will be clamped below)
+    const TOP_MIN_Y     = 0.18; // never let cards go above this (keeps them under the title)
+    let TABLE_TOP_Y_PCT = 0.72; // table starts well below the car
     let BOTTOM_PRICE_Y  = 0.90;
 
     // Colors
@@ -92,6 +94,8 @@
         if (!Number.isNaN(fy)) BG_FOCUS_Y = Math.min(1, Math.max(0, fy));
         const fx = Number(qs.get('focusX'));
         if (!Number.isNaN(fx)) BG_FOCUS_X = Math.min(1, Math.max(0, fx));
+        const ty = Number(qs.get('tableY'));
+        if (!Number.isNaN(ty)) TABLE_TOP_Y_PCT = Math.min(0.88, Math.max(0.62, ty/100));
       } catch {}
     })();
 
@@ -217,13 +221,13 @@
       const uiReady = (!!mainBitmap && dataReady);
       if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return;
 
-      // --- Top metrics (two cards) — original size/position ---
-      const topY = Math.floor(h * TOP_OVERLAY_Y);
-      const cardW = Math.min(Math.max(px(300), Math.floor(w*0.28)), px(520));
-      const cardH = px(84);
-      const gap   = Math.min(px(24), Math.floor(w*0.04));
-      const totalX = Math.floor((w - (cardW*2 + gap)) / 2);
-      const usdX   = totalX + cardW + gap;
+      // --- Top metrics (two compact edge cards) ---
+      let topY = Math.floor(h * Math.max(TOP_OVERLAY_Y, TOP_MIN_Y));
+      const margin = Math.max(px(16), Math.floor(w*0.035));
+      const cardW  = Math.min(Math.max(px(240), Math.floor(w*0.22)), px(420));
+      const cardH  = px(68);
+      const totalX = margin;                 // left-aligned
+      const usdX   = w - margin - cardW;     // right-aligned
 
       drawGlass(totalX, topY, cardW, cardH);
       drawGlass(usdX,  topY, cardW, cardH);
@@ -232,8 +236,12 @@
       const pxUsd = price?.priceUsd ? Number(price.priceUsd) : 0;
       const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * pxUsd);
 
-      const padX = px(14), padY = px(12);
-      text({ str: 'Total burned',        x: totalX+padX, y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
+      const padX = px(12), padY = px(10);
+      text({ str: 'Total burned',        x: totalX+padX, y: topY+padY+2, size: px(11), color: COLOR.muted, weight: 700, baseline: 'top' });
+      text({ str: 'Total USD burned',    x: usdX+padX,   y: topY+padY+2, size: px(11), color: COLOR.muted, weight: 700, baseline: 'top' });
+
+      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(26), size: px(20), weight: 800, color: COLOR.accent,  baseline: 'top' });
+      text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(26), size: px(20), weight: 800, color: COLOR.accent2, baseline: 'top' });
       text({ str: 'Total USD burned',    x: usdX+padX,   y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
 
       text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent,  baseline: 'top' });
@@ -248,11 +256,11 @@
       const rowH   = px(24), headH = px(46), tPad = px(10);
       const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2;
       let tableX = Math.floor((w - tableW)/2);
-      let tableY = Math.floor(h * 0.64); // just below the car
+      let tableY = Math.floor(h * TABLE_TOP_Y_PCT); // comfortably below the car
       if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
       // --- Mini-cards above table: Supply (left) and Last updated (right) ---
-      const miniGap = px(10);
+      const miniGap = px(12);
       const miniH = px(42);
 
       // Supply
@@ -351,3 +359,4 @@
   </script>
 </body>
 </html>
+
