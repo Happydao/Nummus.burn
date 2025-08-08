@@ -7,7 +7,6 @@
   <meta name="description" content="Live burn dashboard for BUMPER on Solana: total burned, USD value, price, and recent burn transactions." />
   <link rel="preload" as="image" href="bg-desktop.png">
   <link rel="preload" as="image" href="bg-thumb.webp">
-  <link rel="preload" as="image" href="titolotr.png">
   <style>
     :root{
       --glass-bg: rgba(0,0,0,0.38);
@@ -27,24 +26,20 @@
 
   <script>
     // ---- Config ----
-    const BG_SRC      = 'bg-desktop.png';       // main background
+    const BG_SRC      = 'bg-desktop.png';       // main background (title is baked-in)
     const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional)
-    const TITLE_SRC   = 'titolotr.png';         // title image (trimmed to remove transparent padding)
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
     const FIT_MODE    = 'cover'; // 'contain' to avoid any crop
 
-    // Draw UI only when everything is ready (bg + title + data)
+    // Draw UI only when everything is ready (bg + data)
     const DRAW_UI_ONLY_WHEN_READY = true;
     const USE_THUMB_PLACEHOLDER   = false; // if true, shows blurred thumb before HD bg
 
     // Layout anchors
     let TOP_OVERLAY_Y   = 0.12; // y for the two top cards
     let BOTTOM_PRICE_Y  = 0.90;
-
-    // Title placement (top center)
-    let TITLE_TOP_MARGIN_PX = -80;
 
     // Colors
     const COLOR = {
@@ -84,12 +79,10 @@
     }
     const px = (n)=> Math.round(n * scaleUnit());
 
-    // --- Quick tuning via URL: ?ty=-20&cardsY=14 (14%) ---
+    // --- Optional tuning via URL: ?cardsY=14 (14%) ---
     (function applyQueryTweaks(){
       try {
         const qs = new URLSearchParams(location.search);
-        const ty = Number(qs.get('ty'));
-        if (!Number.isNaN(ty)) TITLE_TOP_MARGIN_PX = ty;
         const cardsY = Number(qs.get('cardsY'));
         if (!Number.isNaN(cardsY)) TOP_OVERLAY_Y = Math.min(0.30, Math.max(0.05, cardsY/100));
       } catch {}
@@ -98,7 +91,6 @@
     // -------- Progressive background loading (blur-up + crossfade) --------
     let thumbBitmap = null;
     let mainBitmap  = null;
-    let titleTrim   = null; // {top,bottom,left,right}
     let bgReady = false;
     let fadeAlpha = 0; // 0..1
 
@@ -113,30 +105,6 @@
         return null;
       }
     }
-
-    // Title image (auto-trim transparent padding)
-    const titleImg = new Image();
-    let titleReady = false;
-    titleImg.onload = ()=>{
-      try {
-        const iw = titleImg.naturalWidth, ih = titleImg.naturalHeight;
-        const off = document.createElement('canvas');
-        off.width = iw; off.height = ih;
-        const octx = off.getContext('2d');
-        octx.drawImage(titleImg, 0, 0);
-        const { data } = octx.getImageData(0,0,iw,ih);
-        const alphaAt = (x,y)=> data[(y*iw + x)*4 + 3];
-        let top=0, bottom=ih-1, left=0, right=iw-1;
-        for (let y=0; y<ih; y++){ for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 32){ top=y; y=ih; break; } } }
-        for (let y=ih-1; y>=0; y--){ for (let x=0; x<iw; x++){ if (alphaAt(x,y) > 32){ bottom=y; y=-1; break; } } }
-        for (let x=0; x<iw; x++){ for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 32){ left=x; x=iw; break; } } }
-        for (let x=iw-1; x>=0; x--){ for (let y=0; y<ih; y++){ if (alphaAt(x,y) > 32){ right=x; x=-1; break; } } }
-        titleTrim = { top, bottom: ih-1-bottom, left, right: iw-1-right };
-      } catch(e){ console.warn('Title trim failed', e); titleTrim = null; }
-      titleReady = true; draw();
-    };
-    titleImg.onerror = ()=>{ console.warn('Failed to load title image:', TITLE_SRC); };
-    titleImg.src = TITLE_SRC;
 
     // Load bg: thumb (optional) then main
     (async function initBackground(){
@@ -232,43 +200,16 @@
       drawBackground(w, h);
       linkHitboxes = [];
 
-      // Wait until bg + title + data are ready
+      // Wait until bg + data are ready
       const dataReady = !!(burn && price);
-      const uiReady = (!!mainBitmap && !!titleReady && dataReady);
+      const uiReady = (!!mainBitmap && dataReady);
       if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return;
 
-      // --- Title image at top center (draw FIRST so cards appear above it) ---
-      let titleBottomY = 0;
-      if (titleReady){
-        if (titleTrim){
-          const srcX = titleTrim.left || 0;
-          const srcY = titleTrim.top  || 0;
-          const srcW = titleImg.naturalWidth  - (titleTrim.left||0) - (titleTrim.right||0);
-          const srcH = titleImg.naturalHeight - (titleTrim.top ||0) - (titleTrim.bottom||0);
-          const maxW = Math.min(w * 0.55, px(760));
-          const scale = maxW / srcW;
-          const tw = maxW; const th = srcH * scale;
-          const tx = Math.floor((w - tw) / 2);
-          const ty = px(TITLE_TOP_MARGIN_PX);
-          ctx.drawImage(titleImg, srcX, srcY, srcW, srcH, tx, ty, tw, th);
-          titleBottomY = ty + th;
-        } else {
-          const maxW = Math.min(w * 0.55, px(760));
-          const scale = maxW / titleImg.naturalWidth;
-          const tw = maxW; const th = titleImg.naturalHeight * scale;
-          const tx = Math.floor((w - tw) / 2);
-          const ty = px(TITLE_TOP_MARGIN_PX);
-          ctx.drawImage(titleImg, tx, ty, tw, th);
-          titleBottomY = ty + th;
-        }
-      }
-
-      // --- Top metrics (two cards) ---
-      let topY = Math.floor(h * TOP_OVERLAY_Y);
-      if (titleBottomY > 0) topY = Math.max(topY, titleBottomY + px(8));
-      const cardW = Math.min(Math.max(px(260), Math.floor(w*0.26)), px(460));
-      const cardH = px(70);
-      const gap   = Math.min(px(18), Math.floor(w*0.035));
+      // --- Top metrics (two cards) — original size/position ---
+      const topY = Math.floor(h * TOP_OVERLAY_Y);
+      const cardW = Math.min(Math.max(px(300), Math.floor(w*0.28)), px(520));
+      const cardH = px(84);
+      const gap   = Math.min(px(24), Math.floor(w*0.04));
       const totalX = Math.floor((w - (cardW*2 + gap)) / 2);
       const usdX   = totalX + cardW + gap;
 
@@ -280,13 +221,11 @@
       const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * pxUsd);
 
       const padX = px(14), padY = px(12);
-      text({ str: 'Total burned',        x: totalX+padX, y: topY+padY+2, size: px(11), color: COLOR.muted, weight: 700, baseline: 'top' });
-      text({ str: 'Total USD burned',    x: usdX+padX,   y: topY+padY+2, size: px(11), color: COLOR.muted, weight: 700, baseline: 'top' });
+      text({ str: 'Total burned',        x: totalX+padX, y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
+      text({ str: 'Total USD burned',    x: usdX+padX,   y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
 
-      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(28), size: px(20), weight: 800, color: COLOR.accent,  baseline: 'top' });
-      text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(28), size: px(20), weight: 800, color: COLOR.accent2, baseline: 'top' });
-
-      // (title drawn earlier)
+      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent,  baseline: 'top' });
+      text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
 
       // --- Compute table layout ---
       const rowsAll = (burn?.burns || []);
