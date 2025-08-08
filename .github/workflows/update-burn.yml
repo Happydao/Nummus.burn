@@ -1,57 +1,58 @@
-name: Update burn data
+name: Update burn & price
 
 on:
   schedule:
     - cron: "0 0 * * *"   # ogni 24h alle 00:00 UTC
-  workflow_dispatch:       # avvio manuale
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  update-burn:
+  update:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Sanity check
+      - name: Pre-run ls
         run: |
-          node -v
-          echo "PWD: $(pwd)"
-          echo "--- ls root ---"; ls -la
-          echo "--- ls scripts ---"; ls -la scripts || true
-          echo "--- ls data (prima) ---"; ls -la data || true
+          echo "--- repo tree ---"
+          ls -la
+          echo "--- scripts ---"
+          ls -la scripts || true
+          echo "--- data (prima) ---"
+          ls -la data || true
 
       - name: Run burn script
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
         run: node scripts/burn.js
 
-      - name: Show generated file
+      - name: Run price script
+        run: node scripts/price.js
+
+      - name: Show outputs
         run: |
-          echo "--- ls data (dopo) ---"; ls -la data || true
-          if [ ! -f data/burn.json ]; then
-            echo "ERRORE: data/burn.json NON creato"; exit 1
-          fi
           echo "=== data/burn.json ==="
           sed -n '1,200p' data/burn.json
+          echo "=== data/price.json ==="
+          sed -n '1,200p' data/price.json
 
-      - name: Commit and push updated burn.json
+      - name: Commit & push data
         run: |
-          git add -A
+          git add data/burn.json data/price.json
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "Update burn.json [skip ci]"
+            git commit -m "Update burn & price [skip ci]"
             git push
           fi
