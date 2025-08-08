@@ -1,96 +1,49 @@
-#!/usr/bin/env node
-"use strict";
+# .github/workflows/update-burn.yml
+name: Update burn & price
 
-/**
- * scripts/price.js
- * - Legge data/burn.json (totalUi)
- * - Prende il prezzo USD del mint BUMPER da Jupiter (v4 + vsToken=USDC)
- * - Scrive data/price.json con:
- *   {
- *     mint, priceUsd, burnTotalTokens, burnTotalUsd, updatedAt
- *   }
- *
- * Node 18+ (fetch built-in), nessuna dipendenza.
- */
+on:
+  schedule:
+    - cron: "0 0 * * *"   # ogni 24h alle 00:00 UTC
+  workflow_dispatch:
 
-const fs = require("fs");
-const path = require("path");
+permissions:
+  contents: write
 
-const BUMPER_MINT = "5bp5PwTyu4i1hGyQsRwRYqiR2CmxyHt2cPJGEbXEbonk";
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
 
-// ---- helpers ----
-async function fetchJson(url) {
-  const r = await fetch(url, { headers: { "accept": "application/json" } });
-  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText} for ${url}`);
-  return r.json();
-}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-// Jupiter v4 + vsToken=USDC (come nel tuo esempio bash)
-// con retry semplice in caso di flakiness
-async function getJupiterPriceUsd(mint, retries = 3) {
-  const url = `https://price.jup.ag/v4/price?ids=${encodeURIComponent(mint)}&vsToken=USDC`;
+      - name: Run burn script
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: node scripts/burn.js
 
-  for (let i = 0; i < retries; i++) {
-    try {
-      const data = await fetchJson(url);
-      if (data && data.data) {
-        if (data.data[mint]?.price != null) {
-          return Number(data.data[mint].price);
-        }
-        // fallback: se la chiave non è esattamente il mint ma c'è 1 solo item
-        const keys = Object.keys(data.data);
-        if (keys.length === 1 && data.data[keys[0]]?.price != null) {
-          return Number(data.data[keys[0]].price);
-        }
-      }
-      throw new Error("Struttura risposta Jupiter inattesa");
-    } catch (err) {
-      if (i === retries - 1) throw err;
-      await new Promise(r => setTimeout(r, 1000 * (i + 1))); // backoff 1s,2s,...
-    }
-  }
-}
+      - name: Run price script (tollerante)
+        run: node scripts/price.js
+        continue-on-error: true
 
-function readBurnJson() {
-  const burnPath = path.join(process.cwd(), "data", "burn.json");
-  if (!fs.existsSync(burnPath)) {
-    throw new Error("data/burn.json non trovato. Esegui prima scripts/burn.js");
-  }
-  const raw = fs.readFileSync(burnPath, "utf8");
-  const j = JSON.parse(raw);
-  const totalUi = parseFloat(j.totalUi || "0");
-  if (!isFinite(totalUi)) throw new Error("totalUi non numerico in data/burn.json");
-  return totalUi;
-}
+      - name: Show outputs
+        run: |
+          echo "=== data/burn.json ==="; sed -n '1,200p' data/burn.json || true
+          echo "=== data/price.json ==="; sed -n '1,200p' data/price.json || true
 
-function writePriceJson(payload) {
-  const outDir = path.join(process.cwd(), "data");
-  const outPath = path.join(outDir, "price.json");
-  fs.mkdirSync(outDir, { recursive: true });
-  fs.writeFileSync(outPath, JSON.stringify(payload, null, 2));
-  return outPath;
-}
-
-// ---- main ----
-(async () => {
-  const burnTotalTokens = readBurnJson();          // numero
-  const priceUsd = await getJupiterPriceUsd(BUMPER_MINT); // numero
-  const burnTotalUsd = burnTotalTokens * priceUsd;
-
-  const out = {
-    mint: BUMPER_MINT,
-    priceUsd,
-    burnTotalTokens,
-    burnTotalUsd,
-    updatedAt: new Date().toISOString(),
-  };
-
-  const outPath = writePriceJson(out);
-  console.log(`Prezzo BUMPER (USD): ${priceUsd}`);
-  console.log(`Totale bruciato (token): ${burnTotalTokens}`);
-  console.log(`Totale bruciato (USD): ${burnTotalUsd}`);
-  console.log(`Salvato: ${path.relative(process.cwd(), outPath)}`);
-})().catch((e) => {
-  console.error("Errore:", e.message);
-  process.exit(1);
-});
+      - name: Commit & push
+        run: |
+          git add data/burn.json data/price.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update burn & price [skip ci]"
+            git push
+          fi
