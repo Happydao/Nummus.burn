@@ -1,12 +1,10 @@
-# .github/workflows/update-burn.yml
 name: Update burn data
 
 on:
   schedule:
-    - cron: "0 0 * * *"   # ogni giorno alle 00:00 UTC
-  workflow_dispatch:       # avvio manuale opzionale
+    - cron: "0 0 * * *"   # ogni 24h alle 00:00 UTC
+  workflow_dispatch:       # avvio manuale
 
-# permette al GITHUB_TOKEN di fare push
 permissions:
   contents: write
 
@@ -24,17 +22,36 @@ jobs:
         with:
           node-version: 18
 
-      # niente npm install: non serve
+      - name: Sanity check
+        run: |
+          node -v
+          echo "PWD: $(pwd)"
+          echo "--- ls root ---"; ls -la
+          echo "--- ls scripts ---"; ls -la scripts || true
+          echo "--- ls data (prima) ---"; ls -la data || true
 
       - name: Run burn script
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
         run: node scripts/burn.js
 
+      - name: Show generated file
+        run: |
+          echo "--- ls data (dopo) ---"; ls -la data || true
+          if [ ! -f data/burn.json ]; then
+            echo "ERRORE: data/burn.json NON creato"; exit 1
+          fi
+          echo "=== data/burn.json ==="
+          sed -n '1,200p' data/burn.json
+
       - name: Commit and push updated burn.json
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/burn.json
-          git diff --quiet && echo "No changes" || git commit -m "Update burn.json [skip ci]"
-          git push
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update burn.json [skip ci]"
+            git push
+          fi
