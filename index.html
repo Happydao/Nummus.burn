@@ -29,20 +29,21 @@
     // ---- Config ----
     const BG_SRC      = 'bg-desktop.png';       // main background
     const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional but recommended)
-    const TITLE_SRC   = 'titolotr.png';           // title image
-    let TITLE_RAISE_PX = 70;                 // raise title by N px (increase to move higher)
+    const TITLE_SRC   = 'titolotr.png';         // title image (new)
+
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
     const FIT_MODE    = 'cover'; // 'contain' to avoid any crop
 
+    // Require everything ready before drawing UI (avoid seeing title before bg)
+    const DRAW_UI_ONLY_WHEN_READY = true;
+
     // Layout anchors (relative to canvas height)
     let TOP_OVERLAY_Y   = 0.12; // y for the two top cards
-    let UPDATED_Y       = 0.62; // moved up: just under the car
     let BOTTOM_PRICE_Y  = 0.90;
 
-    // Supply card custom anchor (desktop only)
-    let SUPPLY_LEFT_X_PCT = 0.06; // 6% from left edge
-    let SUPPLY_Y_PCT      = 0.58; // near the ground, under legionaries
+    // Title placement: pin to top center
+    const TITLE_TOP_MARGIN_PX = 12; // distance from top edge
 
     // Colors
     const COLOR = {
@@ -72,8 +73,8 @@
         canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      if (h < 700) { TOP_OVERLAY_Y = 0.10; UPDATED_Y = 0.66; BOTTOM_PRICE_Y = 0.88; }
-      else { TOP_OVERLAY_Y = 0.12; UPDATED_Y = 0.62; BOTTOM_PRICE_Y = 0.90; }
+      // keep top cards a bit higher on short screens
+      TOP_OVERLAY_Y = (h < 700) ? 0.10 : 0.12;
     }
 
     function scaleUnit() {
@@ -214,22 +215,24 @@
       drawBackground(w, h);
       linkHitboxes = [];
 
-      // --- Title image (centered above cards) ---
-      const topY = Math.floor(h * TOP_OVERLAY_Y);
+      // Gate: don't draw UI until bg + title + data ready (if enabled)
+      const dataReady = !!(burn && price);
+      const uiReady = (!!mainBitmap && !!titleReady && dataReady);
+      if (DRAW_UI_ONLY_WHEN_READY && !uiReady) return; // wait until all ready
+
+      // --- Title image at top center ---
       if (titleReady){
         const maxW = Math.min(w * 0.5, px(640));
         const scale = maxW / titleImg.naturalWidth;
         const tw = maxW;
         const th = titleImg.naturalHeight * scale;
         const tx = Math.floor((w - tw) / 2);
-        const ty = Math.max(px(14), topY - th - px(10) - px(TITLE_RAISE_PX));
+        const ty = px(TITLE_TOP_MARGIN_PX);
         ctx.drawImage(titleImg, tx, ty, tw, th);
-      } else {
-        // fallback text title
-        text({ str: 'BUMPER BURN', x: Math.floor(w/2), y: Math.max(px(24), topY - px(28)), size: px(34), weight: 900, align: 'center' });
       }
 
       // --- Top metrics (two cards) ---
+      const topY = Math.floor(h * TOP_OVERLAY_Y);
       const cardW = Math.min(Math.max(px(300), Math.floor(w*0.28)), px(520));
       const cardH = px(84);
       const gap   = Math.min(px(24), Math.floor(w*0.04));
@@ -250,45 +253,7 @@
       text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent,  baseline: 'top' });
       text({ str: money(totalUsd),                  x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
 
-      // --- Supply card ---
-      const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
-        ? price.totalSupplyTokensNum
-        : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
-
-      let supplyX, supplyY;
-      if (w < 800) {
-        // mobile/tablet: keep it centered below the two cards
-        supplyY = topY + cardH + px(14);
-        supplyX = Math.floor((w - cardW)/2);
-      } else {
-        // desktop: left-bottom by percentage anchors
-        supplyY = Math.floor(h * SUPPLY_Y_PCT);
-        supplyX = Math.floor(w * SUPPLY_LEFT_X_PCT);
-      }
-
-      drawGlass(supplyX, supplyY, cardW, cardH);
-      text({ str: 'Total supply', x: supplyX+padX, y: supplyY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
-      text({ str: formatSupplyCompact(supplyNum), x: supplyX+padX, y: supplyY+padY+px(32), size: px(22), weight: 800, color: COLOR.text, baseline: 'top' });
-
-      // --- Last updated ---
-      const updated = price?.updatedAt || burn?.updatedAt || null;
-      if (updated){
-        const u = new Date(updated).toLocaleString();
-        text({ str: `Last updated: ${u}`, x: Math.floor(w/2), y: Math.floor(h*UPDATED_Y), size: px(12), color: COLOR.muted, weight: 700, align: 'center' });
-      }
-
-      // --- Bottom price ---
-      const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
-      const label = `BUMPER price: ${priceStr} USD`;
-      ctx.font = `700 ${px(16)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
-      const m = ctx.measureText(label);
-      const bottomY = Math.floor(h * BOTTOM_PRICE_Y);
-      const pad = px(10), bh = px(34), bw = m.width + pad*2;
-      const bx = Math.floor((w - bw)/2), by = Math.floor(bottomY - bh/2);
-      drawGlass(bx, by, bw, bh);
-      text({ str: label, x: Math.floor(w/2), y: bottomY+1, size: px(16), weight: 700, align: 'center', baseline: 'middle' });
-
-      // --- Burns table ---
+      // --- Compute table layout (we need it to place mini-cards above it) ---
       const rowsAll = (burn?.burns || []);
       const maxRows = w < 520 ? 8 : (w < 900 ? 12 : 20);
       const rows = rowsAll.slice(0, maxRows);
@@ -297,9 +262,39 @@
       const rowH   = px(24), headH = px(32), tPad = px(10);
       const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2;
       let tableX = Math.floor((w - tableW)/2);
-      let tableY = Math.floor(h * (UPDATED_Y + 0.03));
+      // Put table just under the car area (approximate 62% height)
+      let tableTopAnchor = Math.floor(h * 0.64);
+      let tableY = tableTopAnchor;
       if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
+      // --- Mini-cards above table: Supply (left) and Last updated (right) ---
+      const miniGap = px(10);
+      const miniH = px(42);
+
+      // Supply mini-card (one-line, small)
+      const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
+        ? price.totalSupplyTokensNum
+        : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
+      const supplyStr = `Total supply: ${formatSupplyCompact(supplyNum)}`;
+      ctx.font = `700 ${px(12)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+      let meas = ctx.measureText(supplyStr);
+      const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(320));
+      const supplyX = tableX;
+      const supplyY = tableY - miniH - miniGap;
+      drawGlass(supplyX, supplyY, supplyW, miniH);
+      text({ str: supplyStr, x: supplyX + px(12), y: supplyY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
+
+      // Last updated mini-card (right)
+      const updated = price?.updatedAt || burn?.updatedAt || null;
+      const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
+      meas = ctx.measureText(updatedStr);
+      const updW = Math.min(Math.max(meas.width + px(24), px(220)), px(360));
+      const updX = tableX + tableW - updW;
+      const updY = supplyY;
+      drawGlass(updX, updY, updW, miniH);
+      text({ str: updatedStr, x: updX + px(12), y: updY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.muted });
+
+      // --- Draw table ---
       drawGlass(tableX, tableY, tableW, tableH);
       text({ str: 'Recent burns', x: tableX+tPad, y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
@@ -325,6 +320,17 @@
         const m2 = ctx.measureText(linkStr);
         linkHitboxes.push({ x: tableX+tPad+colIndexW+colQtyW+8, y: ry - Math.floor(rowH*0.2), w: m2.width, h: Math.floor(rowH*0.9), url });
       }
+
+      // --- Bottom price (unchanged) ---
+      const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
+      const label = `BUMPER price: ${priceStr} USD`;
+      ctx.font = `700 ${px(16)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+      const m = ctx.measureText(label);
+      const bottomY = Math.floor(h * BOTTOM_PRICE_Y);
+      const pad2 = px(10), bh = px(34), bw = m.width + pad2*2;
+      const bx = Math.floor((w - bw)/2), by = Math.floor(bottomY - bh/2);
+      drawGlass(bx, by, bw, bh);
+      text({ str: label, x: Math.floor(w/2), y: bottomY+1, size: px(16), weight: 700, align: 'center', baseline: 'middle' });
     }
 
     // Interactivity
