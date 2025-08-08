@@ -38,14 +38,14 @@
     const BG_SRC = 'sfondo.png';
     const BURN_JSON = 'data/burn.json';
     const PRICE_JSON = 'data/price.json';
-    const MAX_ROWS = 50; // recent burns to display
+    const FIT_MODE = 'contain'; // 'contain' shows the whole image (no ugly crop); 'cover' fills but crops
 
-    // Layout anchors (percentages of canvas height)
-    let TOP_OVERLAY_Y = 0.18;     // top metrics y (18% of height)
-    let BOTTOM_PRICE_Y = 0.90;    // price label baseline y (90% of height)
-    let UPDATED_Y = 0.66;         // "last updated" text y
+    // Layout anchors (relative to canvas height)
+    let TOP_OVERLAY_Y = 0.18;   // top metrics Y (18% of height)
+    let BOTTOM_PRICE_Y = 0.90;  // bottom price baseline Y
+    let UPDATED_Y = 0.66;       // last updated text Y
 
-    // Colors
+    // Colors from CSS custom props (fallbacks included)
     const COLOR = {
       text: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#f3f3f3',
       muted: getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#c8c8c8',
@@ -56,10 +56,10 @@
       link: '#9ee8ff'
     };
 
+    // Canvas setup (no scroll)
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
 
-    // HiDPI support
     function resizeCanvasToDisplaySize() {
       const dpr = window.devicePixelRatio || 1;
       const w = Math.floor(window.innerWidth);
@@ -69,44 +69,42 @@
         canvas.height = h * dpr;
         canvas.style.width = w + 'px';
         canvas.style.height = h + 'px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // scale for crisp rendering
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      // Optionally adapt anchors on ultra-wide / mobile
-      if (h < 700) {
-        TOP_OVERLAY_Y = 0.14;
-        UPDATED_Y = 0.62;
-        BOTTOM_PRICE_Y = 0.88;
-      } else {
-        TOP_OVERLAY_Y = 0.18;
-        UPDATED_Y = 0.66;
-        BOTTOM_PRICE_Y = 0.90;
-      }
+      // Tweak anchors for small heights
+      if (h < 700) { TOP_OVERLAY_Y = 0.14; UPDATED_Y = 0.60; BOTTOM_PRICE_Y = 0.88; }
+      else { TOP_OVERLAY_Y = 0.18; UPDATED_Y = 0.66; BOTTOM_PRICE_Y = 0.90; }
     }
 
-    // Background image scaled to cover
+    // Responsive scale helper (keeps texts/cards reasonable on mobile)
+    function scaleUnit() {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      const s = Math.min(w / 1440, h / 900); // base on 1440x900
+      return Math.max(0.65, Math.min(1.15, s)); // clamp
+    }
+    const px = (n)=> Math.round(n * scaleUnit());
+
+    // Background image
     const bg = new Image();
     bg.src = BG_SRC;
     let bgReady = false;
     bg.onload = ()=>{ bgReady = true; draw(); };
 
     // Data state
-    let burn = null; // { totalUi, burns: [ { amountUi, url } ], count }
-    let price = null; // { priceUsd, burnTotalUsd, updatedAt, ... }
+    let burn = null; // { totalUi, burns, count, updatedAt? }
+    let price = null; // { priceUsd, burnTotalUsd, updatedAt? }
 
     // Clickable link hitboxes
-    let linkHitboxes = []; // { x,y,w,h, url }
+    let linkHitboxes = []; // { x,y,w,h,url }
 
     function cacheBust(url){
-      const t = Date.now();
-      return url + (url.includes('?') ? '&' : '?') + 't=' + t;
+      return url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
     }
-
     async function loadJson(url){
       const res = await fetch(cacheBust(url), { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP '+res.status+' for '+url);
       return res.json();
     }
-
     async function refreshData(){
       try {
         const [b, p] = await Promise.all([
@@ -114,11 +112,8 @@
           loadJson(PRICE_JSON).catch(()=>null)
         ]);
         burn = b; price = p;
-      } catch (e) {
-        console.error(e);
-      } finally {
-        draw();
-      }
+      } catch (e) { console.error(e); }
+      finally { draw(); }
     }
 
     // Helpers
@@ -132,33 +127,14 @@
       ctx.arcTo(x, y, x+w, y, rr);
       ctx.closePath();
     }
-
     function drawGlass(x, y, w, h){
-      roundRectPath(x, y, w, h, 14);
+      roundRectPath(x, y, w, h, px(12));
       ctx.fillStyle = COLOR.glass;
       ctx.fill();
       ctx.strokeStyle = COLOR.stroke;
       ctx.lineWidth = 1;
       ctx.stroke();
-      // subtle inner line
-      ctx.save();
-      ctx.globalAlpha = 0.12;
-      ctx.beginPath();
-      ctx.moveTo(x, y+h*0.5);
-      ctx.lineTo(x+w, y+h*0.5);
-      ctx.strokeStyle = '#fff';
-      ctx.stroke();
-      ctx.restore();
     }
-
-    function shadow(fn){
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.55)';
-      ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
-      fn();
-      ctx.restore();
-    }
-
     function text(opts){
       const { str, x, y, size=20, weight=400, color=COLOR.text, align='left', baseline='alphabetic' } = opts;
       ctx.fillStyle = color;
@@ -166,152 +142,143 @@
       ctx.textAlign = align; ctx.textBaseline = baseline;
       ctx.fillText(str, x, y);
     }
-
     function fitNumber(n, maxDp){
       if (typeof n !== 'number' || !isFinite(n)) return '—';
       const abs = Math.abs(n);
       const dp = abs >= 1 ? Math.min(maxDp, 2) : Math.min(maxDp, 6);
       return n.toLocaleString(undefined, { maximumFractionDigits: dp });
     }
-
     function money(n){
       if (typeof n !== 'number' || !isFinite(n)) return '—';
       return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
     }
 
+    function drawBackground(w, h){
+      if (!bgReady) return;
+      const imgW = bg.naturalWidth || bg.width;
+      const imgH = bg.naturalHeight || bg.height;
+      const scale = (FIT_MODE === 'cover') ? Math.max(w / imgW, h / imgH) : Math.min(w / imgW, h / imgH);
+      const dw = imgW * scale;
+      const dh = imgH * scale;
+      const dx = (w - dw) / 2;
+      const dy = (h - dh) / 2;
+      ctx.drawImage(bg, dx, dy, dw, dh);
+      // Soften edges & improve readability
+      const grad = ctx.createLinearGradient(0,0,0,h);
+      grad.addColorStop(0, 'rgba(0,0,0,0.12)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.40)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,0,w,h);
+    }
+
     function draw(){
       resizeCanvasToDisplaySize();
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      const s = scaleUnit();
 
       // Clear
       ctx.clearRect(0,0,w,h);
+      drawBackground(w, h);
 
-      // Background cover
-      if (bgReady){
-        const imgW = bg.naturalWidth || bg.width;
-        const imgH = bg.naturalHeight || bg.height;
-        const scale = Math.max(w / imgW, h / imgH);
-        const dw = imgW * scale;
-        const dh = imgH * scale;
-        const dx = (w - dw) / 2;
-        const dy = (h - dh) / 2;
-        ctx.drawImage(bg, dx, dy, dw, dh);
-        // subtle dark gradient for readability
-        const grad = ctx.createLinearGradient(0,0,0,h);
-        grad.addColorStop(0, 'rgba(0,0,0,0.15)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.55)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,w,h);
-      }
+      linkHitboxes = [];
 
-      linkHitboxes = []; // reset links each frame
+      // --- Top metrics ---
+      const topY = Math.floor(h * TOP_OVERLAY_Y);
+      const cardW = Math.min(Math.max(px(300), Math.floor(w*0.28)), px(520));
+      const cardH = px(84);
+      const gap   = Math.min(px(24), Math.floor(w*0.04));
+      const totalX = Math.floor((w - (cardW*2 + gap)) / 2);
+      const usdX   = totalX + cardW + gap;
 
-      // --- Top metrics (Total burned & USD value) ---
-      const topY = h * TOP_OVERLAY_Y;
-      const cardW = Math.min(Math.max(320, w*0.28), 520);
-      const cardH = 90;
-      const gap = Math.min(32, w*0.04);
-      const totalX = (w - (cardW*2 + gap)) / 2;
-      const usdX = totalX + cardW + gap;
+      drawGlass(totalX, topY, cardW, cardH);
+      drawGlass(usdX,  topY, cardW, cardH);
 
-      shadow(()=> drawGlass(totalX, topY, cardW, cardH));
-      shadow(()=> drawGlass(usdX,  topY, cardW, cardH));
-
-      // Pull numbers
       const totalTokens = burn?.totalUi ? Number(burn.totalUi) : 0;
-      const px = price?.priceUsd ? Number(price.priceUsd) : 0;
-      const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * px);
+      const pxUsd = price?.priceUsd ? Number(price.priceUsd) : 0;
+      const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * pxUsd);
 
-      // Labels & values
-      const padX = 16, padY = 14;
-      text({ str: 'Total burned', x: totalX+padX, y: topY+padY+2, size: 14, color: COLOR.muted, weight: 600, baseline: 'top' });
-      text({ str: 'USD value',    x: usdX+padX,   y: topY+padY+2, size: 14, color: COLOR.muted, weight: 600, baseline: 'top' });
+      const padX = px(14), padY = px(12);
+      text({ str: 'Total burned', x: totalX+padX, y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
+      text({ str: 'USD value',    x: usdX+padX,   y: topY+padY+2, size: px(12), color: COLOR.muted, weight: 700, baseline: 'top' });
 
-      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+38, size: 28, weight: 800, color: COLOR.accent, baseline: 'top' });
-      text({ str: money(totalUsd),               x: usdX+padX,   y: topY+padY+38, size: 28, weight: 800, color: COLOR.accent2, baseline: 'top' });
+      text({ str: fitNumber(totalTokens, 6)+' BUMPER', x: totalX+padX, y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent, baseline: 'top' });
+      text({ str: money(totalUsd),                 x: usdX+padX,   y: topY+padY+px(32), size: px(22), weight: 800, color: COLOR.accent2, baseline: 'top' });
 
-      // --- Bottom price label ---
-      const priceStr = (px ? px.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
+      // --- Bottom price ---
+      const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
       const label = `BUMPER price: ${priceStr} USD`;
+      ctx.font = `700 ${px(16)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       const m = ctx.measureText(label);
-      const bottomY = h * BOTTOM_PRICE_Y;
-      shadow(()=>{
-        const pad = 10; const bh = 36; const bw = m.width + pad*2;
-        const bx = (w - bw)/2; const by = bottomY - bh/2;
-        drawGlass(bx, by, bw, bh);
-        text({ str: label, x: w/2, y: bottomY+1, size: 18, weight: 700, align: 'center', baseline: 'middle' });
-      });
+      const bottomY = Math.floor(h * BOTTOM_PRICE_Y);
+      const pad = px(10), bh = px(34), bw = m.width + pad*2;
+      const bx = Math.floor((w - bw)/2), by = Math.floor(bottomY - bh/2);
+      drawGlass(bx, by, bw, bh);
+      text({ str: label, x: Math.floor(w/2), y: bottomY+1, size: px(16), weight: 700, align: 'center', baseline: 'middle' });
 
       // --- Last updated ---
       const updated = price?.updatedAt || burn?.updatedAt || null;
       if (updated){
         const u = new Date(updated).toLocaleString();
-        text({ str: `Last updated: ${u}`, x: w/2, y: h*UPDATED_Y, size: 14, color: COLOR.muted, weight: 600, align: 'center' });
+        text({ str: `Last updated: ${u}`, x: Math.floor(w/2), y: Math.floor(h*UPDATED_Y), size: px(12), color: COLOR.muted, weight: 700, align: 'center' });
       }
 
-      // --- Burns table (glass card) ---
-      const rows = (burn?.burns || []).slice(0, MAX_ROWS);
-      const tableW = Math.min(Math.max(480, w*0.9), 1100);
-      const rowH = 30; const headH = 36; const pad = 12;
-      const tableH = headH + Math.max(1, rows.length) * rowH + pad*2;
-      let tableX = (w - tableW)/2;
-      let tableY = h * (UPDATED_Y + 0.03);
-      if (tableY + tableH > h - 12) {
-        tableY = h - 12 - tableH; // keep on screen
-      }
+      // --- Burns table (compact on mobile) ---
+      const rowsAll = (burn?.burns || []);
+      const maxRows = w < 520 ? 8 : (w < 900 ? 12 : 20);
+      const rows = rowsAll.slice(0, maxRows);
 
-      shadow(()=> drawGlass(tableX, tableY, tableW, tableH));
+      const tableW = Math.min(Math.max(px(420), Math.floor(w*0.92)), px(1000));
+      const rowH   = px(24), headH = px(32), tPad = px(10);
+      const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2;
+      let tableX = Math.floor((w - tableW)/2);
+      let tableY = Math.floor(h * (UPDATED_Y + 0.03));
+      if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
-      // Header
-      text({ str: 'Recent burns', x: tableX+pad, y: tableY+pad+2, size: 14, color: COLOR.muted, weight: 700, baseline: 'top' });
+      drawGlass(tableX, tableY, tableW, tableH);
 
-      // Columns
-      const colIndexW = 40; // #
-      const colQtyW   = Math.max(180, tableW*0.30);
-      const colLinkW  = tableW - pad*2 - colIndexW - colQtyW;
+      text({ str: 'Recent burns', x: tableX+tPad, y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
-      const y0 = tableY + headH + pad;
+      const colIndexW = px(32);
+      const colQtyW   = Math.max(px(150), Math.floor(tableW*0.28));
+      const colLinkW  = tableW - tPad*2 - colIndexW - colQtyW;
+
       // header titles
-      text({ str: '#',                x: tableX+pad+8,                 y: tableY+pad+2, size: 14, color: COLOR.muted, weight: 700, baseline: 'top' });
-      text({ str: 'Amount (BUMPER)',  x: tableX+pad+colIndexW+10,      y: tableY+pad+2, size: 14, color: COLOR.muted, weight: 700, baseline: 'top' });
-      text({ str: 'Transaction',      x: tableX+pad+colIndexW+colQtyW+10, y: tableY+pad+2, size: 14, color: COLOR.muted, weight: 700, baseline: 'top' });
+      text({ str: '#',               x: tableX+tPad+6,                      y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      text({ str: 'Amount (BUMPER)', x: tableX+tPad+colIndexW+8,            y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      text({ str: 'Transaction',     x: tableX+tPad+colIndexW+colQtyW+8,    y: tableY+tPad+2, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
-      // rows
-      ctx.save();
+      // rows & link hitboxes
+      linkHitboxes = [];
       for (let i=0; i<Math.max(1, rows.length); i++){
-        const ry = y0 + i*rowH;
+        const ry = tableY + headH + tPad + i*rowH;
         if (rows.length === 0){
-          text({ str: 'No burns found.', x: tableX+pad, y: ry, size: 16, color: COLOR.muted, weight: 600, baseline: 'top' });
+          text({ str: 'No burns found.', x: tableX+tPad, y: ry, size: px(14), color: COLOR.muted, weight: 700, baseline: 'top' });
           break;
         }
         const row = rows[i];
         const qty = Number(row.amountUi || 0);
         const url = row.url || '#';
 
-        // index
-        text({ str: String(i+1), x: tableX+pad+8, y: ry+10, size: 14, color: COLOR.text, weight: 600, baseline: 'alphabetic' });
-        // quantity
-        text({ str: fitNumber(qty, 6), x: tableX+pad+colIndexW+10, y: ry+10, size: 16, color: COLOR.text, weight: 700 });
-        // link
+        text({ str: String(i+1), x: tableX+tPad+6, y: ry+Math.floor(rowH*0.68), size: px(12), color: COLOR.text, weight: 700 });
+        text({ str: fitNumber(qty, 6), x: tableX+tPad+colIndexW+8, y: ry+Math.floor(rowH*0.68), size: px(14), color: COLOR.text, weight: 800 });
+
         const linkStr = 'Open on Solscan';
-        ctx.font = `600 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+        ctx.font = `700 ${px(12)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
         ctx.fillStyle = COLOR.link;
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-        ctx.fillText(linkStr, tableX+pad+colIndexW+colQtyW+10, ry+10);
+        ctx.fillText(linkStr, tableX+tPad+colIndexW+colQtyW+8, ry+Math.floor(rowH*0.68));
         const m = ctx.measureText(linkStr);
         linkHitboxes.push({
-          x: tableX+pad+colIndexW+colQtyW+10,
-          y: ry - 6,
+          x: tableX+tPad+colIndexW+colQtyW+8,
+          y: ry - Math.floor(rowH*0.2),
           w: m.width,
-          h: 22,
+          h: Math.floor(rowH*0.9),
           url
         });
       }
-      ctx.restore();
     }
 
-    // Interactivity: make Solscan links clickable
+    // Interactivity for Solscan links
     canvas.addEventListener('mousemove', (e)=>{
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -324,15 +291,13 @@
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       const hit = linkHitboxes.find(b => x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h);
-      if (hit && hit.url && hit.url.startsWith('http')) {
-        window.open(hit.url, '_blank', 'noopener');
-      }
+      if (hit && hit.url && hit.url.startsWith('http')) window.open(hit.url, '_blank', 'noopener');
     });
 
     // Initial load & timers
     window.addEventListener('resize', draw);
     refreshData();
-    // Optional: refresh data every 5 min without scrolling
+    // Optional: refresh data every 5 minutes
     setInterval(refreshData, 5*60*1000);
   </script>
 </body>
