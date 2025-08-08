@@ -1,12 +1,13 @@
+# .github/workflows/update-burn.yml
 name: Update burn & price
 
 on:
   schedule:
     - cron: "0 0 * * *"   # ogni giorno alle 00:00 UTC
-  workflow_dispatch:       # avvio manuale opzionale
+  workflow_dispatch:       # avvio manuale
 
 permissions:
-  contents: write          # serve per committare
+  contents: write
 
 concurrency:
   group: update-burn
@@ -15,12 +16,10 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,10 +31,9 @@ jobs:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
         run: node scripts/burn.js
 
-      - name: Small delay
-        run: sleep 2
-
-      - name: Run price script
+      - name: Run price script (DexScreener + Helius)
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
         run: node scripts/price.js
 
       - name: Show outputs
