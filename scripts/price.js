@@ -5,7 +5,14 @@
  * scripts/price.js
  * - Prezzo USD di BUMPER da DexScreener (sceglie il pair con più liquidità)
  * - Total supply via Helius getTokenSupply
- * - Scrive atomicamente data/price.json
+ * - Legge data/burn.json -> totalUi e calcola burnTotalUsd = priceUsd * totalUi
+ * - Scrive atomicamente data/price.json:
+ *   {
+ *     mint, priceUsd,
+ *     totalSupplyTokens, totalSupplyTokensNum, supplyRaw, decimals,
+ *     burnTotalTokens, burnTotalUsd,
+ *     updatedAt
+ *   }
  */
 
 const fs = require("fs");
@@ -20,6 +27,7 @@ if (!API_KEY) {
 }
 const RPC_URL = `https://mainnet.helius-rpc.com/?api-key=${API_KEY}`;
 
+/* ---------- Utils ---------- */
 function writeJsonAtomic(outPath, obj) {
   const tmp = outPath + ".tmp";
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -39,7 +47,9 @@ async function fetchJson(url, { timeoutMs = 10000 } = {}) {
   return res.json();
 }
 
-/* -------- Prezzo da DexScreener -------- */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ---------- Prezzo: DexScreener ---------- */
 function pickBestPair(pairs) {
   if (!Array.isArray(pairs) || pairs.length === 0) return null;
   let best = null, bestLiq = -1;
@@ -60,7 +70,7 @@ async function getPriceFromDexScreener(mint) {
   return Number.isFinite(price) ? price : 0;
 }
 
-/* -------- Supply via Helius -------- */
+/* ---------- Supply: Helius ---------- */
 async function heliusRpc(method, params) {
   const res = await fetch(RPC_URL, {
     method: "POST",
@@ -91,23 +101,57 @@ async function getTotalSupply(mint) {
   const amount = res?.value?.amount;
   const decimals = res?.value?.decimals;
   if (amount == null || decimals == null) throw new Error("Risposta inattesa da getTokenSupply");
-  const uiStr = bigIntToDecimalString(amount, Number(decimals)); // preciso (stringa)
-  const uiNum = Number.parseFloat(uiStr);                         // numero, utile per UI
+  const uiStr = bigIntToDecimalString(amount, Number(decimals)); // string precisa
+  const uiNum = Number.parseFloat(uiStr);                         // numero per grafici/UI
   return { supplyRaw: String(amount), decimals: Number(decimals), supplyUiStr: uiStr, supplyUiNum: uiNum };
 }
 
-/* -------- Main -------- */
-(async () => {
-  const priceUsd = await getPriceFromDexScreener(BUMPER_MINT); // solo DexScreener
-  const supply   = await getTotalSupply(BUMPER_MINT);
+/* ---------- Lettura burn.json con retry ---------- */
+async function readBurnTotalUiWithRetry(file, attempts = 8, delayMs = 250) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const raw = fs.readFileSync(file, "utf8");
+      if (!raw || raw.trim().length === 0) throw new Error("file vuoto");
+      const j = JSON.parse(raw);
+      const totalUi = parseFloat(j.totalUi || "0");
+      if (!isFinite(totalUi)) throw new Error("totalUi non numerico");
+      return totalUi;
+    } catch (e) {
+      if (i === attempts - 1) {
+        console.warn("WARN:", e.message, "- userò 0 per burnTotalTokens");
+        return 0;
+      }
+      await sleep(delayMs);
+    }
+  }
+  return 0;
+}
 
+/* ---------- Main ---------- */
+(async () => {
+  // 1) prezzo USD
+  const priceUsd = await getPriceFromDexScreener(BUMPER_MINT);
+
+  // 2) supply totale
+  const supply = await getTotalSupply(BUMPER_MINT);
+
+  // 3) totale bruciato in token (dal file data/burn.json)
+  const burnJsonPath = path.join(process.cwd(), "data", "burn.json");
+  const burnTotalTokens = await readBurnTotalUiWithRetry(burnJsonPath); // numero
+
+  // 4) valore USD bruciato
+  const burnTotalUsd = burnTotalTokens * priceUsd;
+
+  // 5) scrivi output
   const payload = {
     mint: BUMPER_MINT,
     priceUsd,
-    totalSupplyTokens: supply.supplyUiStr,     // preciso
-    totalSupplyTokensNum: supply.supplyUiNum,  // numero (approx)
+    totalSupplyTokens: supply.supplyUiStr,
+    totalSupplyTokensNum: supply.supplyUiNum,
     supplyRaw: supply.supplyRaw,
     decimals: supply.decimals,
+    burnTotalTokens,   // <-- letto da burn.json (totalUi)
+    burnTotalUsd,      // <-- nuovo campo richiesto
     updatedAt: new Date().toISOString()
   };
 
@@ -116,6 +160,8 @@ async function getTotalSupply(mint) {
 
   console.log(`Prezzo USD BUMPER (DexScreener): ${priceUsd}`);
   console.log(`Total supply (tokens): ${supply.supplyUiStr}`);
+  console.log(`Totale bruciato (token): ${burnTotalTokens}`);
+  console.log(`Valore bruciato (USD): ${burnTotalUsd}`);
   console.log(`Salvato: ${path.relative(process.cwd(), outPath)}`);
 })().catch((e) => {
   console.error("Errore:", e.message);
