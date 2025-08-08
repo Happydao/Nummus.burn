@@ -37,10 +37,15 @@
     const DRAW_UI_ONLY_WHEN_READY = true;
     const USE_THUMB_PLACEHOLDER   = false;
 
-    // ======== CARD POSITIONS (from your selection) ========
+    // ======== CARD POSITIONS (desktop, come da tue scelte) ========
     const CARDS_Y_FRAC = 0.1350;          // y fraction (under title, avoid car)
     const CARD1_CENTER_X_FRAC = 0.3220;   // Total burned (under BELLA)
     const CARD2_CENTER_X_FRAC = 0.6520;   // Total USD burned (under BURN)
+
+    // ======== Mobile tuning ========
+    const MOBILE_BREAKPOINT = 900;        // < 900px = mobile mode
+    const MOBILE_CARDS_Y_FRAC = 0.13;     // posizione verticale card1 su mobile
+    const MOBILE_CARDS_GAP_PX = 10;       // distanza tra card1 e card2 su mobile (px scalati)
 
     // Colors
     const COLOR = {
@@ -73,9 +78,11 @@
     }
 
     function scaleUnit() {
+      // consente di scalare più in basso su mobile
       const w = canvas.clientWidth, h = canvas.clientHeight;
       const s = Math.min(w / 1440, h / 900);
-      return Math.max(0.65, Math.min(1.15, s));
+      const isMobile = w < MOBILE_BREAKPOINT;
+      return Math.max(isMobile ? 0.45 : 0.65, Math.min(1.15, s));
     }
     const px = (n)=> Math.round(n * scaleUnit());
 
@@ -186,6 +193,7 @@
     function draw(){
       resizeCanvasToDisplaySize();
       const w = canvas.clientWidth, h = canvas.clientHeight;
+      const isMobile = w < MOBILE_BREAKPOINT;
 
       ctx.clearRect(0,0,w,h);
       drawBackground(w, h);
@@ -211,7 +219,7 @@
       const label2 = 'Total USD burned';
       const value2 = money(totalUsd);
 
-      // misura card 1 (label sinistra, valore sotto)
+      // misura card 1
       ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       const c1LabelW = ctx.measureText(label1).width;
       ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
@@ -219,7 +227,7 @@
       const card1W = Math.ceil(Math.max(c1LabelW, c1ValueW) + padX*2);
       const card1H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      // misura card 2 (label destra, valore sotto)
+      // misura card 2
       ctx.font = `${labelWeight} ${labelSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       const c2LabelW = ctx.measureText(label2).width;
       ctx.font = `${valueWeight} ${valueSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
@@ -227,51 +235,54 @@
       const card2W = Math.ceil(Math.max(c2LabelW, c2ValueW) + padX*2);
       const card2H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      // y pos sotto titolo, cercando di non coprire la macchina (tetto ~34% h)
-      let topY = Math.floor(h * CARDS_Y_FRAC);
-      const maxSafeY = Math.floor(h * 0.33 - Math.max(card1H, card2H));
-      if (topY > maxSafeY) topY = Math.max(px(8), maxSafeY);
+      // ---- Posizioni card
+      let card1X, card1Y, card2X, card2Y;
 
-      // x pos fissate dalle frazioni (centro carta)
-      let c1cx = Math.floor(w * CARD1_CENTER_X_FRAC);
-      let c2cx = Math.floor(w * CARD2_CENTER_X_FRAC);
+      if (!isMobile) {
+        // Desktop: usa le tue frazioni
+        let topY = Math.floor(h * CARDS_Y_FRAC);
+        // evita l'auto (tetto ~33% h)
+        const maxSafeY = Math.floor(h * 0.33 - Math.max(card1H, card2H));
+        if (topY > maxSafeY) topY = Math.max(px(8), maxSafeY);
 
-      // fallback responsive: su schermi stretti centra e mantiene gap
-      if (w < 980) {
-        const gap = px(16);
-        const groupW = card1W + gap + card2W;
-        const startX = Math.floor((w - groupW)/2);
-        c1cx = startX + Math.floor(card1W/2);
-        c2cx = startX + card1W + gap + Math.floor(card2W/2);
+        const c1cx = Math.floor(w * CARD1_CENTER_X_FRAC);
+        const c2cx = Math.floor(w * CARD2_CENTER_X_FRAC);
+        card1X = c1cx - Math.floor(card1W/2);
+        card2X = c2cx - Math.floor(card2W/2);
+        card1Y = card2Y = topY;
+      } else {
+        // Mobile: impilate e centrate
+        const centerX = Math.floor(w * 0.5);
+        card1X = centerX - Math.floor(card1W/2);
+        card1Y = Math.floor(h * MOBILE_CARDS_Y_FRAC);
+        card2X = centerX - Math.floor(card2W/2);
+        card2Y = card1Y + card1H + px(MOBILE_CARDS_GAP_PX);
       }
 
-      const card1X = c1cx - Math.floor(card1W/2);
-      const card2X = c2cx - Math.floor(card2W/2);
+      // draw card 1 (label left, value sotto)
+      drawGlass(card1X, card1Y, card1W, card1H);
+      text({ str: label1, x: card1X + padX, y: card1Y + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
+      text({ str: value1, x: card1X + padX, y: card1Y + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
 
-      // draw card 1
-      drawGlass(card1X, topY, card1W, card1H);
-      text({ str: label1, x: card1X + padX, y: topY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
-      text({ str: value1, x: card1X + padX, y: topY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
-
-      // draw card 2 (label right)
-      drawGlass(card2X, topY, card2W, card2H);
-      text({ str: label2, x: card2X + card2W - padX, y: topY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'top' });
-      text({ str: value2, x: card2X + padX, y: topY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'top' });
+      // draw card 2 (label right, value sotto)
+      const c2LabelX = card2X + card2W - padX;
+      drawGlass(card2X, card2Y, card2W, card2H);
+      text({ str: label2, x: c2LabelX, y: card2Y + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'top' });
+      text({ str: value2, x: card2X + padX, y: card2Y + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'top' });
 
       // --- Table & mini-cards ---
-      const rowsAll = (burn?.burns || []);
-      const maxRows = w < 520 ? 8 : (w < 900 ? 12 : 20);
-      const rows = rowsAll.slice(0, maxRows);
-
       const tableW = Math.min(Math.max(px(420), Math.floor(w*0.92)), px(1000));
       const rowH   = px(24), headH = px(46), tPad = px(10);
-      const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2;
-      let tableX = Math.floor((w - tableW)/2);
-      let tableY = Math.floor(h * 0.64);
-      if (tableY + tableH > h - 12) tableY = h - 12 - tableH;
 
-      // mini: supply
+      // posizioniamo la tabella in base alle card per evitare sovrapposizioni
+      let tableX = Math.floor((w - tableW)/2);
+      let tableY = (!isMobile)
+        ? Math.floor(h * 0.64)
+        : (card2Y + card2H + px(14));  // su mobile subito sotto le card
+
+      // mini-cards sopra tabella
       const miniGap = px(10), miniH = px(42);
+
       const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
         ? price.totalSupplyTokensNum
         : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
@@ -279,20 +290,43 @@
       ctx.font = `700 ${px(12)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       let meas = ctx.measureText(supplyStr);
       const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(360));
-      const supplyX = tableX;
-      const supplyY = tableY - miniH - miniGap;
-      drawGlass(supplyX, supplyY, supplyW, miniH);
-      text({ str: supplyStr, x: supplyX + px(12), y: supplyY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
+      let supplyX = tableX;
+      let supplyY = tableY - miniH - miniGap;
 
-      // mini: updated
       const updated = price?.updatedAt || burn?.updatedAt || null;
       const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
       meas = ctx.measureText(updatedStr);
       const updW = Math.min(Math.max(meas.width + px(24), px(220)), px(420));
-      const updX = tableX + tableW - updW;
-      const updY = supplyY;
+      let updX = tableX + tableW - updW;
+      let updY = supplyY;
+
+      // Su mobile, se non ci stanno affiancate, le impiliamo
+      if (isMobile && supplyW + updW + px(8) > tableW) {
+        // supply sopra, updated sotto
+        supplyX = tableX;
+        supplyY = tableY - miniH*2 - miniGap*2;
+        updX = tableX;
+        updY = supplyY + miniH + miniGap;
+        // sposta un filo in basso la tabella per non stringere
+        tableY = tableY; // già sotto le card, ok
+      }
+
+      // calcolo righe tabella che entrano davvero nello spazio rimasto
+      // prima disegniamo i box mini, così teniamo conto del loro spazio
+      drawGlass(supplyX, supplyY, supplyW, miniH);
+      text({ str: supplyStr, x: supplyX + px(12), y: supplyY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
+
       drawGlass(updX, updY, updW, miniH);
       text({ str: updatedStr, x: updX + px(12), y: updY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.muted });
+
+      // spazio disponibile fino al fondo (margine 12px)
+      const avail = (h - 12) - tableY;
+      const rowsAll = (burn?.burns || []);
+      let rowsFit = Math.floor((avail - (headH + tPad*2)) / rowH);
+      rowsFit = Math.max(4, Math.min(rowsFit, (!isMobile ? 20 : 10))); // su mobile max 10, ma almeno 4
+      const rows = rowsAll.slice(0, Math.max(0, rowsFit));
+
+      const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2;
 
       // tabella
       drawGlass(tableX, tableY, tableW, tableH);
