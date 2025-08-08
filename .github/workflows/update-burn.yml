@@ -1,23 +1,28 @@
-# .github/workflows/update-burn.yml
 name: Update burn & price
 
 on:
   schedule:
-    - cron: "0 0 * * *"   # ogni 24h alle 00:00 UTC
-  workflow_dispatch:
+    - cron: "0 0 * * *"   # ogni giorno alle 00:00 UTC
+  workflow_dispatch:       # avvio manuale opzionale
 
 permissions:
-  contents: write
+  contents: write          # serve per committare
+
+concurrency:
+  group: update-burn
+  cancel-in-progress: true
 
 jobs:
   update:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
@@ -27,16 +32,18 @@ jobs:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
         run: node scripts/burn.js
 
-      - name: Run price script (tollerante)
+      - name: Small delay
+        run: sleep 2
+
+      - name: Run price script
         run: node scripts/price.js
-        continue-on-error: true
 
       - name: Show outputs
         run: |
           echo "=== data/burn.json ==="; sed -n '1,200p' data/burn.json || true
           echo "=== data/price.json ==="; sed -n '1,200p' data/price.json || true
 
-      - name: Commit & push
+      - name: Commit & push if changed
         run: |
           git add data/burn.json data/price.json
           if git diff --cached --quiet; then
@@ -45,5 +52,6 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git commit -m "Update burn & price [skip ci]"
+            git pull --rebase
             git push
           fi
