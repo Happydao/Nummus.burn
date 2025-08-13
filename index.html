@@ -161,19 +161,14 @@
     }
     function fitNumber(n, maxDp){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); const dp = abs >= 1 ? Math.min(maxDp, 2) : Math.min(maxDp, 6); return n.toLocaleString(undefined, { maximumFractionDigits: dp }); }
     function money(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }); }
-
-    // 👉 NUOVA FORMATTAZIONE: intero con punti (stile italiano), niente "M"
-    function formatSupplyIntDots(n){
+    function formatSupplyCompact(n){
       if (typeof n !== 'number' || !isFinite(n)) return '—';
-      const int = Math.trunc(n); // niente decimali
-      try {
-        return int.toLocaleString('it-IT'); // punti come separatori delle migliaia
-      } catch {
-        // Fallback manuale
-        return String(int).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      }
+      const abs = Math.abs(n);
+      if (abs >= 1e9)  return (n/1e9).toLocaleString(undefined,{ maximumFractionDigits: 3 }) + ' B';
+      if (abs >= 1e6)  return (n/1e6).toLocaleString(undefined,{ maximumFractionDigits: 3 }) + ' M';
+      if (abs >= 1e3)  return (n/1e3).toLocaleString(undefined,{ maximumFractionDigits: 3 });
+      return n.toLocaleString(undefined,{ maximumFractionDigits: 3 });
     }
-
     function shorten(addr){ return (addr && addr.length>14) ? addr.slice(0,8)+'…'+addr.slice(-6) : addr; }
 
     function drawBackground(w, h){
@@ -299,17 +294,14 @@
       const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number')
         ? price.totalSupplyTokensNum
         : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
-
-      // 👉 Usa formato intero con punti (es: 499.851.966)
-      const supplyStr = `Total supply: ${formatSupplyIntDots(supplyNum)}`;
-
+      const supplyStr = `Total supply: ${formatSupplyCompact(supplyNum)}`;
       ctx.font = `700 ${px(12)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       let meas = ctx.measureText(supplyStr);
       const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(360));
       const supplyX = tableX;
       const supplyY = tableY - miniH - miniGap;
       drawGlass(supplyX, supplyY, supplyW, miniH);
-      text({ str: supplyStr, x: supplyX + px(12), y: supplyY + Math.floor(mimiH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
+      text({ str: supplyStr, x: supplyX + px(12), y: supplyY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
 
       const updated = price?.updatedAt || burn?.updatedAt || null;
       const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
