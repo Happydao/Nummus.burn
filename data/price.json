@@ -1,11 +1,11 @@
 {
   "mint": "5bp5PwTyu4i1hGyQsRwRYqiR2CmxyHt2cPJGEbXEbonk",
-  "priceUsd": 0.002391,
+  "priceUsd": 0.002412,
   "totalSupplyTokens": "499840267.457328",
   "totalSupplyTokensNum": 499840267.457328,
   "supplyRaw": "499840267457328",
   "decimals": 6,
   "burnTotalTokens": 147086,
-  "burnTotalUsd": 351.68262599999997,
-  "updatedAt": "2025-09-11T22:01:10.269Z"
+  "burnTotalUsd": 354.771432,
+  "updatedAt": "2025-09-11T23:01:14.456Z"
 }
