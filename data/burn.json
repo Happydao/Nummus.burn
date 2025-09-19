@@ -1,11 +1,7 @@
 {
-  "count": 3,
-  "totalUi": "272086",
+  "count": 2,
+  "totalUi": "147086",
   "burns": [
-    {
-      "amountUi": "125000",
-      "url": "https://solscan.io/tx/4fSR45aVCLpnCDTDYVQwv5BTtrk7dG7DBG2yH962nzxZbaYcCoPj3YDuK5CKjn4kmGfvnk8MVLKHCDfiJdPV4M8f"
-    },
     {
       "amountUi": "84686",
       "url": "https://solscan.io/tx/5yXb7zLJtDUVwQdtcCSZsncBFz6hDTdf9rb6UJ41cViuPPtXMFgpr9mjGoZNseKG2WupJwNwQdE7tsxn8LDZFeDf"
