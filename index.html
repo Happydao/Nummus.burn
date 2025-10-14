@@ -38,7 +38,7 @@
 
     // ===== Layout (tutto spinto in alto) =====
     // Contenitore unico (cards + mini info + tabella) vicino alla parte alta dell'immagine
-    let CONTAINER_TOP_Y_PCT = 0.30; // default 38% dall'alto — spinto in alto rispetto a prima
+    let CONTAINER_TOP_Y_PCT = 0.22; // default 38% dall'alto — spinto in alto rispetto a prima
     let BOTTOM_PRICE_Y      = 0.94;
 
     // Per assetto rapido da URL: ?tableY=36 (percentuale) & focusY=0.30
@@ -264,7 +264,7 @@
       // Posizionamento contenitore
       const containerX = Math.floor((w - tableW)/2);
       let   containerY = Math.floor(h * CONTAINER_TOP_Y_PCT);
-      if (containerY < px(80)) containerY = px(80); // non andare troppo su
+      if (containerY < px(12)) containerY = px(12); // non andare troppo su
       if (containerY + containerH > h - px(12)) containerY = Math.max(px(12), h - px(12) - containerH);
 
       // Disegno contenitore
