@@ -38,7 +38,7 @@
 
     // ===== Layout (tutto spinto in alto) =====
     // Contenitore unico (cards + mini info + tabella) vicino alla parte alta dell'immagine
-    let CONTAINER_TOP_Y_PCT = 0.38; // default 38% dall'alto — spinto in alto rispetto a prima
+    let CONTAINER_TOP_Y_PCT = 0.30; // default 38% dall'alto — spinto in alto rispetto a prima
     let BOTTOM_PRICE_Y      = 0.94;
 
     // Per assetto rapido da URL: ?tableY=36 (percentuale) & focusY=0.30
@@ -138,7 +138,29 @@
 
     // Helpers
     function roundRectPath(x, y, w, h, r){ const rr = Math.min(r, w/2, h/2); ctx.beginPath(); ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr); ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath(); }
-    function drawGlass(x, y, w, h){ roundRectPath(x, y, w, h, px(12)); ctx.fillStyle = COLOR.glass; ctx.fill(); ctx.strokeStyle = COLOR.stroke; ctx.lineWidth = 1; ctx.stroke(); }
+    function drawGlass(x, y, w, h){
+      // base glass
+      roundRectPath(x, y, w, h, px(14));
+      ctx.fillStyle = 'rgba(0,0,0,0.46)'; // più scuro per contrasto
+      ctx.fill();
+      // bordo doppio: chiaro + glow
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.stroke();
+      // inner stroke colorato leggero
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(120,255,178,0.25)';
+      ctx.stroke();
+      // shadow soft
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.45)';
+      ctx.shadowBlur = px(14);
+      ctx.shadowOffsetY = px(2);
+      roundRectPath(x, y, w, h, px(14));
+      ctx.strokeStyle = 'rgba(0,0,0,0)';
+      ctx.stroke();
+      ctx.restore();
+    }
     function text(opts){ const { str,x,y,size=20,weight=400,color=COLOR.text,align='left',baseline='alphabetic'}=opts; ctx.fillStyle=color; ctx.font = `${weight} ${size}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`; ctx.textAlign=align; ctx.textBaseline=baseline; ctx.fillText(str,x,y); }
     function fitNumber(n, maxDp){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); const dp = abs >= 1 ? Math.min(maxDp, 2) : Math.min(maxDp, 6); return n.toLocaleString(undefined, { maximumFractionDigits: dp }); }
     function money(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }); }
@@ -248,10 +270,33 @@
       // Disegno contenitore
       drawGlass(containerX, containerY, tableW, containerH);
 
-      // --- RIGA 1: due card ---
+      // --- RIGA 1: tre elementi: (sx) Burn address card, (centro) due card Total ---
       const cardsY = containerY + tPad;
-      const c1x = containerX + tPad;
-      const c2x = containerX + tableW - tPad - card2W;
+
+      // Burn address card (sinistra)
+      const burnLbl = `Burn address`;
+      const burnVal = shorten(BURN_ADDRESS);
+      ctx.font = `${labelWeight} ${labelSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
+      const baLblW = ctx.measureText(burnLbl).width;
+      ctx.font = `${valueWeight} ${valueSize - px(6)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
+      const baValW = ctx.measureText(burnVal).width;
+      const burnW = Math.ceil(Math.max(baLblW, baValW) + padX*2);
+      const burnH = Math.ceil(padY*2 + labelSize + vGap + (valueSize - px(6)));
+      const burnX = containerX + tPad;
+
+      drawGlass(burnX, cardsY, burnW, burnH);
+      text({ str: burnLbl, x: burnX + padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
+      text({ str: burnVal, x: burnX + padX, y: cardsY + padY + labelSize + vGap, size: valueSize - px(6), weight: valueWeight, color: COLOR.link, baseline: 'top' });
+      // hitbox burn
+      linkHitboxes.push({ x: burnX, y: cardsY, w: burnW, h: burnH, url: BURN_SOLSCAN_URL });
+
+      // due card centrali (Total burned + Total USD burned)
+      const gapMid = Math.min(px(18), Math.floor(tableW*0.04));
+      const centerBlockW = card1W + gapMid + card2W;
+      const cCenterX = containerX + Math.floor(tableW/2);
+      const cBlockX = cCenterX - Math.floor(centerBlockW/2);
+      const c1x = cBlockX;
+      const c2x = cBlockX + card1W + gapMid;
 
       // card 1
       drawGlass(c1x, cardsY, card1W, card1H);
@@ -263,7 +308,7 @@
       text({ str: label2, x: c2x + card2W - padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'top' });
       text({ str: value2, x: c2x + padX, y: cardsY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'top' });
 
-      // --- RIGA 2: mini info (sx supply, centro burn address link, dx updated) ---
+      // --- RIGA 2: mini info (sx supply, centro VUOTO, dx updated) ---
       const miniY = cardsY + cardsH + tPad;
 
       // supply sx
@@ -276,17 +321,7 @@
       drawGlass(updX, miniY, updW, miniH);
       text({ str: updatedStr, x: updX + px(12), y: miniY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.muted });
 
-      // burn address al centro (come pill link senza bordo)
-      (function drawBurnCenter(){
-        const label = `Burn address: ${shorten(BURN_ADDRESS)}`;
-        ctx.font = `700 ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-        const tw = ctx.measureText(label).width;
-        const centerX = containerX + Math.floor(tableW/2);
-        const centerY = miniY + Math.floor(miniH/2) + 1;
-        ctx.fillStyle = COLOR.link; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(label, centerX, centerY);
-        linkHitboxes.push({ x: centerX - Math.ceil(tw/2), y: centerY - px(10), w: Math.ceil(tw), h: px(20), url: BURN_SOLSCAN_URL });
-      })();
+      // (centro lasciato libero per respiro visivo)
 
       // --- RIGA 3: tabella burns ---
       const tableX = containerX + tPad;
@@ -353,3 +388,4 @@
   </script>
 </body>
 </html>
+
