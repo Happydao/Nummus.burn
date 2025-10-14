@@ -38,7 +38,7 @@
 
     // ===== Layout (tutto spinto in alto) =====
     // Contenitore unico (cards + mini info + tabella) vicino alla parte alta dell'immagine
-    let CONTAINER_TOP_Y_PCT = 0.22; // default 38% dall'alto — spinto in alto rispetto a prima
+    let CONTAINER_TOP_Y_PCT = 0.16; // default 38% dall'alto — spinto in alto rispetto a prima
     let BOTTOM_PRICE_Y      = 0.94;
 
     // Per assetto rapido da URL: ?tableY=36 (percentuale) & focusY=0.30
@@ -90,7 +90,7 @@
     (function tweaks(){
       try{
         const qs = new URLSearchParams(location.search);
-        const ty = Number(qs.get('tableY')); if (!Number.isNaN(ty)) CONTAINER_TOP_Y_PCT = Math.min(0.70, Math.max(0.26, ty/100));
+        const ty = Number(qs.get('tableY')); if (!Number.isNaN(ty)) CONTAINER_TOP_Y_PCT = ty/100;
         const fy = Number(qs.get('focusY')); if (!Number.isNaN(fy)) BG_FOCUS_Y = Math.min(1, Math.max(0, fy));
       }catch{}
     })();
