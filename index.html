@@ -4,9 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NUMMUS BURN — Live Dashboard</title>
-  <meta name="description" content="Live burn dashboard on Solana: totals, USD value, supply, last update, burn address and recent burn transactions." />
+  <meta name="description" content="Live burn dashboard on Solana: totals, USD value, supply, last update and recent burn transactions for NUMMUS." />
   <link rel="preload" as="image" href="bg-desktop.png">
   <link rel="preload" as="image" href="bg-thumb.webp">
+  <link rel="preload" as="image" href="nummus.burn.png">
   <style>
     :root{
       --glass-bg: rgba(0,0,0,0.46);
@@ -28,8 +29,8 @@
 
   <script>
     // ---- Config ----
-    const BG_SRC      = 'bg-desktop.png';       // main background con titolo integrato in immagine
-    const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional)
+    const BG_SRC      = 'bg-desktop.png';
+    const THUMB_SRC   = 'bg-thumb.webp';
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
@@ -38,16 +39,15 @@
     const DRAW_UI_ONLY_WHEN_READY = true;
     const USE_THUMB_PLACEHOLDER   = false;
 
-    // ===== Layout (contenitore alto, tabella più in basso rispetto al bordo) =====
-    let CONTAINER_TOP_Y_PCT = 0.20; // un po' più basso del bordo alto (regolabile con ?tableY=xx)
-    let BOTTOM_PRICE_Y      = 0.94;
+    // ===== Layout =====
+    let CONTAINER_TOP_Y_PCT = 0.20; // posizione del pannello (puoi regolare con ?tableY=xx)
+    let BOTTOM_INFO_Y       = 0.94; // baseline per badge in basso (last updated / price)
 
-    // Background focus (0=alto, 1=basso) — regolabile con ?focusY
+    // Background focus (0=alto, 1=basso)
     let BG_FOCUS_X = 0.5, BG_FOCUS_Y = 0.30;
 
-    // Links (in futuro puoi esporli in UI)
-    const GITHUB_REPO_URL    = 'https://github.com/Happydao/Nummus.burn';
-    const BURN_ADDRESS       = '—'; // opzionale
+    // Links (se ti serve esporli)
+    const GITHUB_REPO_URL = 'https://github.com/Happydao/Nummus.burn';
 
     // Colors
     const COLOR = {
@@ -96,13 +96,20 @@
       }catch{}
     })();
 
-    // -------- Background loading --------
+    // -------- Assets --------
     let thumbBitmap = null, mainBitmap  = null, bgReady = false, fadeAlpha = 0;
 
     async function loadBitmap(src){
       try { const res = await fetch(src, { cache: 'force-cache' }); if (!res.ok) throw new Error('HTTP '+res.status); const blob = await res.blob(); return await createImageBitmap(blob); }
       catch (e) { console.warn('Image load failed:', src, e.message); return null; }
     }
+
+    // Title image
+    const titleImg = new Image();
+    let titleReady = false;
+    titleImg.onload = ()=>{ titleReady = true; draw(); };
+    titleImg.onerror = ()=>{ console.warn('Failed to load title image: nummus.burn.png'); };
+    titleImg.src = 'nummus.burn.png';
 
     (async function initBackground(){
       thumbBitmap = await loadBitmap(THUMB_SRC); draw();
@@ -134,24 +141,20 @@
       ctx.fillStyle = COLOR.glass; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = COLOR.stroke; ctx.stroke();
       ctx.lineWidth = 1; ctx.strokeStyle = COLOR.stroke2; ctx.stroke();
-      // outer glow shadow
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = px(14); ctx.shadowOffsetY = px(2);
       roundRectPath(x, y, w, h, px(14)); ctx.strokeStyle = 'rgba(0,0,0,0)'; ctx.stroke(); ctx.restore();
     }
-    function drawPanel(x, y, w, h){ // cornice più marcata per la tabella
+    function drawPanel(x, y, w, h){
       roundRectPath(x, y, w, h, px(16));
       ctx.fillStyle = 'rgba(0,0,0,0.52)'; ctx.fill();
-      // bordo triplo
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.stroke();
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(120,255,178,0.35)'; ctx.stroke();
       ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,95,210,0.30)'; ctx.stroke();
-      // header shine
       const g = ctx.createLinearGradient(x, y, x, y+px(54));
-      g.addColorStop(0, 'rgba(255,255,255,0.12)');
-      g.addColorStop(1, 'rgba(255,255,255,0.00)');
+      g.addColorStop(0, 'rgba(255,255,255,0.12)'); g.addColorStop(1, 'rgba(255,255,255,0.00)');
       ctx.fillStyle = g; ctx.fillRect(x+px(2), y+px(2), w-px(4), px(54));
     }
-    function text(opts){ const { str,x,y,size=20,weight=400,color=COLOR.text,align='left',baseline='alphabetic',shadow=false }=opts; ctx.save(); if (shadow){ ctx.shadowColor='rgba(0,0,0,0.55)'; ctx.shadowBlur=px(12); ctx.shadowOffsetY=px(2);} ctx.fillStyle=color; ctx.font = `${weight} ${size}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`; ctx.textAlign=align; ctx.textBaseline=baseline; ctx.fillText(str,x,y); ctx.restore(); }
+    function text(opts){ const { str,x,y,size=20,weight=400,color=COLOR.text,align='left',baseline='alphabetic'}=opts; ctx.fillStyle=color; ctx.font = `${weight} ${size}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; ctx.textAlign=align; ctx.textBaseline=baseline; ctx.fillText(str,x,y); }
     function fitNumber(n, maxDp){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); const dp = abs >= 1 ? Math.min(maxDp, 2) : Math.min(maxDp, 6); return n.toLocaleString(undefined, { maximumFractionDigits: dp }); }
     function money(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }); }
     function formatSupplyCompact(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); if (abs >= 1e9) return (n/1e9).toLocaleString(undefined,{ maximumFractionDigits: 3 })+' B'; if (abs >= 1e6) return (n/1e6).toLocaleString(undefined,{ maximumFractionDigits: 3 })+' M'; if (abs >= 1e3) return (n/1e3).toLocaleString(undefined,{ maximumFractionDigits: 3 }); return n.toLocaleString(undefined,{ maximumFractionDigits: 3 }); }
@@ -201,117 +204,97 @@
       const maxRows = w < 520 ? 8 : (w < 900 ? 12 : 20);
       const rows = rowsAll.slice(0, maxRows);
 
-      // === Misure contenitore e pannello tabella ===
-      const tableW = Math.min(Math.max(px(480), Math.floor(w*0.92)), px(1200));
+      // === Misure pannello ===
+      const tableW = Math.min(Math.max(px(520), Math.floor(w*0.92)), px(1200));
       const rowH   = px(24), headH = px(32), tPad = px(12);
 
-      // top row: titolo (centro) + due card a destra
-      // misura card 1
-      const label1 = 'Total burned'; const value1 = `${fitNumber(totalTokens, 6)} TOKEN`;
+      // Card: Total burned (NUMMUS)
+      const label1 = 'Total burned'; const value1 = `${fitNumber(totalTokens, 6)} NUMMUS`;
       ctx.font = `${labelWeight} ${labelSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const c1LabelW = ctx.measureText(label1).width;
       ctx.font = `${valueWeight} ${valueSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const c1ValueW = ctx.measureText(value1).width;
       const card1W = Math.ceil(Math.max(c1LabelW, c1ValueW) + padX*2); const card1H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
-      // card 2
+
+      // Card: Total USD burned
       const label2 = 'Total USD burned'; const value2 = money(totalUsd);
       ctx.font = `${labelWeight} ${labelSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const c2LabelW = ctx.measureText(label2).width;
       ctx.font = `${valueWeight} ${valueSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const c2ValueW = ctx.measureText(value2).width;
       const card2W = Math.ceil(Math.max(c2LabelW, c2ValueW) + padX*2); const card2H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
+
       const cardsH = Math.max(card1H, card2H);
 
-      // titolo centrale grande
-      const titleText = 'NUMMUS BURN';
-      ctx.font = `900 ${px(34)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      const titleW = Math.ceil(ctx.measureText(titleText).width);
-      const titlePadX = px(24), titlePadY = px(16);
-      const titleCardW = Math.max(titleW + titlePadX*2, px(360));
-      const titleCardH = px(68);
+      // Card: Total supply (a sinistra)
+      const supplyStr = `Total supply: ${formatSupplyCompact(supplyNum)}`;
+      ctx.font = `700 ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
+      let meas = ctx.measureText(supplyStr);
+      const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(420));
+      const supplyH = px(40);
 
-      // Altezza pannello: header (titolo+card) + mini info + tabella
-      const miniH = px(40), miniGap = px(10);
-      const tableRowsH = headH + Math.max(1, rows.length) * rowH + tPad*2 + px(6); // extra spazio per righe
-      const headerBlockH = Math.max(titleCardH, cardsH);
-      const panelH = tPad + headerBlockH + tPad + miniH + tPad + tableRowsH + tPad;
+      // Titolo immagine centrale
+      const titleMaxW = Math.min(Math.floor(tableW * 0.44), px(620));
+      let titleW = 0, titleH = 0;
+      if (titleReady) {
+        const ratio = titleImg.naturalWidth / titleImg.naturalHeight;
+        titleW = titleMaxW;
+        titleH = Math.round(titleW / ratio);
+      } else {
+        titleW = px(360); titleH = px(64); // fallback spazio
+      }
+
+      // Header block height
+      const headerBlockH = Math.max(titleH, cardsH, supplyH);
+
+      // Altezza tabella
+      const tableRowsH = headH + Math.max(1, rows.length) * rowH + tPad*2 + px(6);
+      const panelH = tPad + headerBlockH + tPad + tableRowsH + tPad;
 
       const panelX = Math.floor((w - tableW)/2);
       let panelY = Math.floor(h * CONTAINER_TOP_Y_PCT);
       if (panelY < px(16)) panelY = px(16);
       if (panelY + panelH > h - px(12)) panelY = Math.max(px(12), h - px(12) - panelH);
 
-      // Disegno pannello tabella (cornice marcata)
+      // Pannello principale
       drawPanel(panelX, panelY, tableW, panelH);
 
-      // --- HEADER: titolo al centro, due card a destra ---
+      // --- HEADER: supply sx, titolo centro, due card dx ---
       const headerY = panelY + tPad;
-      // titolo centrale con effetto "fuoco"
-      (function drawTitle(){
-        const tx = panelX + Math.floor(tableW/2) - Math.floor(titleCardW/2);
-        const ty = headerY + Math.floor((headerBlockH - titleCardH)/2);
-        drawGlass(tx, ty, titleCardW, titleCardH);
-        // testo con gradiente "fire"
-        const gx = tx + titlePadX, gy = ty + titlePadY;
-        const grad = ctx.createLinearGradient(0, gy, 0, gy + px(36));
-        grad.addColorStop(0, '#fff1a6');
-        grad.addColorStop(0.5, '#ffb347');
-        grad.addColorStop(1, '#ff6a00');
-        // glow
-        ctx.save();
-        ctx.shadowColor = 'rgba(255,110,0,0.55)';
-        ctx.shadowBlur = px(16);
-        ctx.shadowOffsetY = px(2);
-        ctx.fillStyle = grad;
-        ctx.font = `900 ${px(34)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-        ctx.textBaseline = 'top';
-        ctx.fillText(titleText, gx, gy);
-        ctx.restore();
-      })();
 
-      // due card a destra (allineate al bordo del pannello)
-      const rightBlockW = card1W + px(18) + card2W;
-      const rBlockX = panelX + tableW - tPad - rightBlockW;
-      const c1x = rBlockX;
-      const c2x = rBlockX + card1W + px(18);
+      // supply (sx)
+      const supplyX = panelX + tPad;
+      drawGlass(supplyX, headerY + Math.floor((headerBlockH - supplyH)/2), supplyW, supplyH);
+      text({ str: supplyStr, x: supplyX + px(12), y: headerY + Math.floor((headerBlockH - supplyH)/2) + Math.floor(supplyH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
+
+      // titolo immagine (centro)
+      const titleX = panelX + Math.floor(tableW/2) - Math.floor(titleW/2);
+      const titleY = headerY + Math.floor((headerBlockH - titleH)/2);
+      if (titleReady) ctx.drawImage(titleImg, titleX, titleY, titleW, titleH);
+      else { text({ str: 'NUMMUS BURN', x: titleX + Math.floor(titleW/2), y: titleY + Math.floor(titleH/2), size: px(24), weight: 900, align: 'center', baseline: 'middle' }); }
+
+      // due card a destra
+      const gapR = px(18);
+      const rightBlockW = card1W + gapR + card2W;
+      const rightX = panelX + tableW - tPad - rightBlockW;
       const cardsY = headerY + Math.floor((headerBlockH - cardsH)/2);
 
       // card 1: Total burned
-      drawGlass(c1x, cardsY, card1W, card1H);
-      text({ str: label1, x: c1x + padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
-      text({ str: value1, x: c1x + padX, y: cardsY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
+      drawGlass(rightX, cardsY, card1W, card1H);
+      text({ str: label1, x: rightX + padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
+      text({ str: value1, x: rightX + padX, y: cardsY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
 
       // card 2: Total USD burned
+      const c2x = rightX + card1W + gapR;
       drawGlass(c2x, cardsY, card2W, card2H);
       text({ str: label2, x: c2x + card2W - padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'top' });
       text({ str: value2, x: c2x + padX, y: cardsY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'top' });
 
-      // --- MINI INFO ROW ---
-      const miniY = headerY + headerBlockH + tPad;
-      // supply sx
-      const supplyStr = `Total supply: ${formatSupplyCompact(supplyNum)}`;
-      ctx.font = `700 ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      let meas = ctx.measureText(supplyStr);
-      const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(380));
-      const supplyX = panelX + tPad;
-      drawGlass(supplyX, miniY, supplyW, miniH);
-      text({ str: supplyStr, x: supplyX + px(12), y: miniY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
-
-      // updated dx
-      const updated = price?.updatedAt || burn?.updatedAt || null;
-      const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
-      meas = ctx.measureText(updatedStr);
-      const updW = Math.min(Math.max(meas.width + px(24), px(220)), px(460));
-      const updX = panelX + tableW - tPad - updW;
-      drawGlass(updX, miniY, updW, miniH);
-      text({ str: updatedStr, x: updX + px(12), y: miniY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.muted });
-
       // --- TABELLA ---
       const tableX = panelX + tPad;
-      const tableY = miniY + miniH + tPad;
+      const tableY = headerY + headerBlockH + tPad; // un po' più in basso del bordo alto
       const tableInnerW = tableW - tPad*2;
-      const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2 + px(6);
+      const tableH = tableRowsH;
 
-      // cornice interna visibile per l'area tabella
       drawPanel(tableX, tableY, tableInnerW, tableH);
 
-      // header barra
+      // Header barra tabella
       const headerBarH = px(36);
       const hbGrad = ctx.createLinearGradient(tableX, tableY, tableX, tableY + headerBarH);
       hbGrad.addColorStop(0, 'rgba(255,255,255,0.10)');
@@ -324,9 +307,9 @@
       const headersY = tableY + headerBarH + px(4);
       const colIndexW = px(32);
       const colQtyW   = Math.max(px(150), Math.floor(tableInnerW*0.30));
-      text({ str: '#',                   x: tableX+px(12),                         y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
-      text({ str: 'Amount (token)',      x: tableX+px(12)+colIndexW+8,              y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
-      text({ str: 'Transaction',         x: tableX+px(12)+colIndexW+colQtyW+8,      y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      text({ str: '#',                     x: tableX+px(12),                         y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      text({ str: 'Amount (NUMMUS)',       x: tableX+px(12)+colIndexW+8,              y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      text({ str: 'Transaction',           x: tableX+px(12)+colIndexW+colQtyW+8,      y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
       // righe
       const rowStartY = headersY + px(22);
@@ -336,7 +319,7 @@
         for (let i=0; i<rows.length; i++){
           const ry = rowStartY + i*rowH;
           const row = rows[i]; const qty = Number(row.amountUi || 0); const url = row.url || '#';
-          // linea separatrice
+          // separator line
           ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tableX+px(10), ry+Math.floor(rowH*0.15)); ctx.lineTo(tableX+tableInnerW-px(10), ry+Math.floor(rowH*0.15)); ctx.stroke();
           text({ str: String(i+1), x: tableX+px(12), y: ry+Math.floor(rowH*0.68), size: px(12), color: COLOR.text, weight: 700 });
           text({ str: fitNumber(qty, 6), x: tableX+px(12)+colIndexW+8, y: ry+Math.floor(rowH*0.68), size: px(14), color: COLOR.text, weight: 800 });
@@ -349,16 +332,28 @@
         }
       }
 
-      // --- Token price badge ---
+      // --- Badge in basso: Last updated (sx) e Nummus Price (dx) ---
+      const updated = price?.updatedAt || burn?.updatedAt || null;
+      const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
       const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
-      const priceLabel = `Token price: ${priceStr} USD`;
-      ctx.font = `700 ${px(16)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      const m = ctx.measureText(priceLabel);
-      const bottomY = Math.floor(h * BOTTOM_PRICE_Y);
-      const pad2 = px(10), bh = px(34), bw = m.width + pad2*2;
-      const bx = Math.floor((w - bw)/2), by = Math.floor(bottomY - bh/2);
-      drawGlass(bx, by, bw, bh);
-      text({ str: priceLabel, x: Math.floor(w/2), y: bottomY+1, size: px(16), weight: 700, align: 'center', baseline: 'middle' });
+      const priceLabel = `Nummus price: ${priceStr} USD`;
+
+      // misura
+      ctx.font = `700 ${px(14)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
+      const upW = Math.ceil(ctx.measureText(updatedStr).width) + px(24);
+      const prW = Math.ceil(ctx.measureText(priceLabel).width) + px(24);
+      const badgeH = px(34);
+      const bottomY = Math.floor(h * BOTTOM_INFO_Y);
+
+      // sinistra: updated
+      const upX = panelX; const upY = bottomY - Math.floor(badgeH/2);
+      drawGlass(upX, upY, upW, badgeH);
+      text({ str: updatedStr, x: upX + px(12), y: bottomY+1, size: px(14), weight: 700, baseline: 'middle', color: COLOR.muted });
+
+      // destra: price
+      const prX = panelX + tableW - prW; const prY = upY;
+      drawGlass(prX, prY, prW, badgeH);
+      text({ str: priceLabel, x: prX + prW - px(12), y: bottomY+1, size: px(14), weight: 700, align: 'right', baseline: 'middle', color: COLOR.text });
     }
 
     // Interactivity
