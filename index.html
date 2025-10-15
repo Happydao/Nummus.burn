@@ -40,14 +40,16 @@
     const USE_THUMB_PLACEHOLDER   = false;
 
     // ===== Layout =====
-    let CONTAINER_TOP_Y_PCT = 0.20; // posizione del pannello (puoi regolare con ?tableY=xx)
+    let CONTAINER_TOP_Y_PCT = 0.20; // posizione del pannello (regolabile con ?tableY=xx)
     let BOTTOM_INFO_Y       = 0.94; // baseline per badge in basso (last updated / price)
 
     // Background focus (0=alto, 1=basso)
     let BG_FOCUS_X = 0.5, BG_FOCUS_Y = 0.30;
 
-    // Links (se ti serve esporli)
+    // Links / Meta
     const GITHUB_REPO_URL = 'https://github.com/Happydao/Nummus.burn';
+    const BURN_ADDRESS    = '—'; // inserisci qui il burn address
+    const BURN_SOLSCAN_URL = (BURN_ADDRESS && BURN_ADDRESS.length > 20) ? 'https://solscan.io/account/' + BURN_ADDRESS : null;
 
     // Colors
     const COLOR = {
@@ -154,10 +156,11 @@
       g.addColorStop(0, 'rgba(255,255,255,0.12)'); g.addColorStop(1, 'rgba(255,255,255,0.00)');
       ctx.fillStyle = g; ctx.fillRect(x+px(2), y+px(2), w-px(4), px(54));
     }
-    function text(opts){ const { str,x,y,size=20,weight=400,color=COLOR.text,align='left',baseline='alphabetic'}=opts; ctx.fillStyle=color; ctx.font = `${weight} ${size}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; ctx.textAlign=align; ctx.textBaseline=baseline; ctx.fillText(str,x,y); }
+    function text(opts){ const { str,x,y,size=20,weight=400,color=COLOR.text,align='left',baseline='alphabetic'}=opts; ctx.fillStyle=color; ctx.font = `${weight} ${size}px system-ui,-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`; ctx.textAlign=align; ctx.textBaseline=baseline; ctx.fillText(str,x,y); }
     function fitNumber(n, maxDp){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); const dp = abs >= 1 ? Math.min(maxDp, 2) : Math.min(maxDp, 6); return n.toLocaleString(undefined, { maximumFractionDigits: dp }); }
     function money(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }); }
     function formatSupplyCompact(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); if (abs >= 1e9) return (n/1e9).toLocaleString(undefined,{ maximumFractionDigits: 3 })+' B'; if (abs >= 1e6) return (n/1e6).toLocaleString(undefined,{ maximumFractionDigits: 3 })+' M'; if (abs >= 1e3) return (n/1e3).toLocaleString(undefined,{ maximumFractionDigits: 3 }); return n.toLocaleString(undefined,{ maximumFractionDigits: 3 }); }
+    function shorten(addr){ return (addr && addr.length>14) ? addr.slice(0,8)+'…'+addr.slice(-6) : (addr||'—'); }
 
     function drawBackground(w, h){
       const bmp = mainBitmap || thumbBitmap;
@@ -193,7 +196,7 @@
       // === Dati ===
       const labelSize = px(12), labelWeight = 700;
       const valueSize = px(22), valueWeight = 800;
-      const padX = px(14), padY = px(10), vGap = px(6);
+      const padX = px(14), padY = px(10), vGap = px(6), colGap = px(10);
 
       const totalTokens = burn?.totalUi ? Number(burn.totalUi) : 0;
       const pxUsd = price?.priceUsd ? Number(price.priceUsd) : 0;
@@ -220,14 +223,26 @@
       ctx.font = `${valueWeight} ${valueSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const c2ValueW = ctx.measureText(value2).width;
       const card2W = Math.ceil(Math.max(c2LabelW, c2ValueW) + padX*2); const card2H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
 
-      const cardsH = Math.max(card1H, card2H);
+      const cardsRightStackH = card1H + colGap + card2H;
 
-      // Card: Total supply (a sinistra)
+      // Card: Total supply (a sinistra, top)
       const supplyStr = `Total supply: ${formatSupplyCompact(supplyNum)}`;
       ctx.font = `700 ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
       let meas = ctx.measureText(supplyStr);
       const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(420));
       const supplyH = px(40);
+
+      // Card: Burn address (sotto supply)
+      const burnLbl = 'Burn address';
+      const burnVal = shorten(BURN_ADDRESS);
+      ctx.font = `${labelWeight} ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
+      const baLblW = ctx.measureText(burnLbl).width;
+      ctx.font = `${valueWeight} ${valueSize - px(6)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
+      const baValW = ctx.measureText(burnVal).width;
+      const burnW = Math.ceil(Math.max(baLblW, baValW) + padX*2);
+      const burnH = Math.ceil(padY*2 + px(12) + vGap + (valueSize - px(6)));
+
+      const cardsLeftStackH = supplyH + colGap + burnH;
 
       // Titolo immagine centrale
       const titleMaxW = Math.min(Math.floor(tableW * 0.34), px(520));
@@ -236,12 +251,10 @@
         const ratio = titleImg.naturalWidth / titleImg.naturalHeight;
         titleW = titleMaxW;
         titleH = Math.round(titleW / ratio);
-      } else {
-        titleW = px(360); titleH = px(64); // fallback spazio
-      }
+      } else { titleW = px(360); titleH = px(64); }
 
-      // Header block height
-      const headerBlockH = Math.max(titleH, cardsH, supplyH);
+      // Header block height = max delle 3 colonne (sx, centro, dx)
+      const headerBlockH = Math.max(cardsLeftStackH, cardsRightStackH, titleH);
 
       // Altezza tabella
       const tableRowsH = headH + Math.max(1, rows.length) * rowH + tPad*2 + px(6);
@@ -255,40 +268,43 @@
       // Pannello principale
       drawPanel(panelX, panelY, tableW, panelH);
 
-      // --- HEADER: supply sx, titolo centro, due card dx ---
+      // --- HEADER LAYOUT ---
       const headerY = panelY + tPad;
 
-      // supply (sx)
-      const supplyX = panelX + tPad;
-      drawGlass(supplyX, headerY + Math.floor((headerBlockH - supplyH)/2), supplyW, supplyH);
-      text({ str: supplyStr, x: supplyX + px(12), y: headerY + Math.floor((headerBlockH - supplyH)/2) + Math.floor(supplyH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
+      // sinistra: supply (top) + burn address (below)
+      const leftX = panelX + tPad;
+      const supplyY = headerY;
+      drawGlass(leftX, supplyY, supplyW, supplyH);
+      text({ str: supplyStr, x: leftX + px(12), y: supplyY + Math.floor(supplyH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
 
-      // titolo immagine (centro)
+      const burnY = supplyY + supplyH + colGap;
+      drawGlass(leftX, burnY, burnW, burnH);
+      text({ str: burnLbl, x: leftX + padX, y: burnY + padY + 2, size: px(12), weight: labelWeight, color: COLOR.muted, baseline: 'top' });
+      text({ str: burnVal, x: leftX + padX, y: burnY + padY + px(12) + vGap, size: valueSize - px(6), weight: valueWeight, color: COLOR.link, baseline: 'top' });
+      if (BURN_SOLSCAN_URL){ linkHitboxes.push({ x: leftX, y: burnY, w: burnW, h: burnH, url: BURN_SOLSCAN_URL }); }
+
+      // centro: titolo immagine
       const titleX = panelX + Math.floor(tableW/2) - Math.floor(titleW/2);
       const titleY = headerY + Math.floor((headerBlockH - titleH)/2);
       if (titleReady) ctx.drawImage(titleImg, titleX, titleY, titleW, titleH);
       else { text({ str: 'NUMMUS BURN', x: titleX + Math.floor(titleW/2), y: titleY + Math.floor(titleH/2), size: px(24), weight: 900, align: 'center', baseline: 'middle' }); }
 
-      // due card a destra
-      const gapR = px(18);
-      const rightBlockW = card1W + gapR + card2W;
-      const rightX = panelX + tableW - tPad - rightBlockW;
-      const cardsY = headerY + Math.floor((headerBlockH - cardsH)/2);
+      // destra: Total burned (top right) + Total USD burned (below)
+      const rightX1 = panelX + tableW - tPad - card1W;
+      const rightY1 = headerY;
+      drawGlass(rightX1, rightY1, card1W, card1H);
+      text({ str: label1, x: rightX1 + padX, y: rightY1 + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
+      text({ str: value1, x: rightX1 + padX, y: rightY1 + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
 
-      // card 1: Total burned
-      drawGlass(rightX, cardsY, card1W, card1H);
-      text({ str: label1, x: rightX + padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
-      text({ str: value1, x: rightX + padX, y: cardsY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
-
-      // card 2: Total USD burned
-      const c2x = rightX + card1W + gapR;
-      drawGlass(c2x, cardsY, card2W, card2H);
-      text({ str: label2, x: c2x + card2W - padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'top' });
-      text({ str: value2, x: c2x + padX, y: cardsY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'top' });
+      const rightX2 = panelX + tableW - tPad - card2W;
+      const rightY2 = rightY1 + card1H + colGap;
+      drawGlass(rightX2, rightY2, card2W, card2H);
+      text({ str: label2, x: rightX2 + card2W - padX, y: rightY2 + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'top' });
+      text({ str: value2, x: rightX2 + padX, y: rightY2 + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'top' });
 
       // --- TABELLA ---
       const tableX = panelX + tPad;
-      const tableY = headerY + headerBlockH + tPad; // un po' più in basso del bordo alto
+      const tableY = headerY + headerBlockH + tPad; // sotto l'header
       const tableInnerW = tableW - tPad*2;
       const tableH = tableRowsH;
 
@@ -338,7 +354,6 @@
       const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
       const priceLabel = `Nummus price: ${priceStr} USD`;
 
-      // misura
       ctx.font = `700 ${px(14)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
       const upW = Math.ceil(ctx.measureText(updatedStr).width) + px(24);
       const prW = Math.ceil(ctx.measureText(priceLabel).width) + px(24);
@@ -374,4 +389,3 @@
   </script>
 </body>
 </html>
-
