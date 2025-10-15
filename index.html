@@ -3,18 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BURN Dashboard — Live</title>
+  <title>NUMMUS BURN — Live Dashboard</title>
   <meta name="description" content="Live burn dashboard on Solana: totals, USD value, supply, last update, burn address and recent burn transactions." />
   <link rel="preload" as="image" href="bg-desktop.png">
   <link rel="preload" as="image" href="bg-thumb.webp">
   <style>
     :root{
-      --glass-bg: rgba(0,0,0,0.38);
-      --glass-border: rgba(255,255,255,0.25);
+      --glass-bg: rgba(0,0,0,0.46);
+      --glass-border: rgba(255,255,255,0.35);
+      --glass-accent: rgba(120,255,178,0.25);
       --text: #f3f3f3;
       --muted: #c8c8c8;
       --accent: #78ffb2;
       --accent2: #ff5fd2;
+      --link: #9ee8ff;
     }
     *{ box-sizing: border-box; }
     html, body { height: 100%; margin: 0; background: #0b0b12; color: var(--text); overflow: hidden; }
@@ -26,38 +28,37 @@
 
   <script>
     // ---- Config ----
-    const BG_SRC      = 'bg-desktop.png';       // main background con titolo integrato
+    const BG_SRC      = 'bg-desktop.png';       // main background con titolo integrato in immagine
     const THUMB_SRC   = 'bg-thumb.webp';        // small preview (optional)
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
-    const FIT_MODE    = 'cover'; // sempre cover
+    const FIT_MODE    = 'cover';
 
     const DRAW_UI_ONLY_WHEN_READY = true;
     const USE_THUMB_PLACEHOLDER   = false;
 
-    // ===== Layout (tutto spinto in alto) =====
-    // Contenitore unico (cards + mini info + tabella) vicino alla parte alta dell'immagine
-    let CONTAINER_TOP_Y_PCT = 0.16; // default 38% dall'alto — spinto in alto rispetto a prima
+    // ===== Layout (contenitore alto, tabella più in basso rispetto al bordo) =====
+    let CONTAINER_TOP_Y_PCT = 0.20; // un po' più basso del bordo alto (regolabile con ?tableY=xx)
     let BOTTOM_PRICE_Y      = 0.94;
 
-    // Per assetto rapido da URL: ?tableY=36 (percentuale) & focusY=0.30
-    let BG_FOCUS_X = 0.5, BG_FOCUS_Y = 0.30; // mostra più "cielo"/titolo
+    // Background focus (0=alto, 1=basso) — regolabile con ?focusY
+    let BG_FOCUS_X = 0.5, BG_FOCUS_Y = 0.30;
 
-    // ===== Links =====
-    const GITHUB_REPO_URL    = 'https://github.com/Happydao/Bumper.burn';
-    const BURN_ADDRESS       = '5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE';
-    const BURN_SOLSCAN_URL   = 'https://solscan.io/account/' + BURN_ADDRESS;
+    // Links (in futuro puoi esporli in UI)
+    const GITHUB_REPO_URL    = 'https://github.com/Happydao/Nummus.burn';
+    const BURN_ADDRESS       = '—'; // opzionale
 
     // Colors
     const COLOR = {
       text: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#f3f3f3',
       muted: getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#c8c8c8',
-      glass: getComputedStyle(document.documentElement).getPropertyValue('--glass-bg').trim() || 'rgba(0,0,0,0.38)',
-      stroke: getComputedStyle(document.documentElement).getPropertyValue('--glass-border').trim() || 'rgba(255,255,255,0.25)',
+      glass: getComputedStyle(document.documentElement).getPropertyValue('--glass-bg').trim() || 'rgba(0,0,0,0.46)',
+      stroke: getComputedStyle(document.documentElement).getPropertyValue('--glass-border').trim() || 'rgba(255,255,255,0.35)',
+      stroke2: getComputedStyle(document.documentElement).getPropertyValue('--glass-accent').trim() || 'rgba(120,255,178,0.25)',
       accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#78ffb2',
       accent2: getComputedStyle(document.documentElement).getPropertyValue('--accent2').trim() || '#ff5fd2',
-      link: '#9ee8ff'
+      link: getComputedStyle(document.documentElement).getPropertyValue('--link').trim() || '#9ee8ff'
     };
 
     // Canvas
@@ -95,22 +96,12 @@
       }catch{}
     })();
 
-    // -------- Progressive background loading --------
-    let thumbBitmap = null;
-    let mainBitmap  = null;
-    let bgReady = false;
-    let fadeAlpha = 0; // 0..1
+    // -------- Background loading --------
+    let thumbBitmap = null, mainBitmap  = null, bgReady = false, fadeAlpha = 0;
 
     async function loadBitmap(src){
-      try {
-        const res = await fetch(src, { cache: 'force-cache' });
-        if (!res.ok) throw new Error('HTTP '+res.status);
-        const blob = await res.blob();
-        return await createImageBitmap(blob);
-      } catch (e) {
-        console.warn('Image load failed:', src, e.message);
-        return null;
-      }
+      try { const res = await fetch(src, { cache: 'force-cache' }); if (!res.ok) throw new Error('HTTP '+res.status); const blob = await res.blob(); return await createImageBitmap(blob); }
+      catch (e) { console.warn('Image load failed:', src, e.message); return null; }
     }
 
     (async function initBackground(){
@@ -139,41 +130,36 @@
     // Helpers
     function roundRectPath(x, y, w, h, r){ const rr = Math.min(r, w/2, h/2); ctx.beginPath(); ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr); ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath(); }
     function drawGlass(x, y, w, h){
-      // base glass
       roundRectPath(x, y, w, h, px(14));
-      ctx.fillStyle = 'rgba(0,0,0,0.46)'; // più scuro per contrasto
-      ctx.fill();
-      // bordo doppio: chiaro + glow
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.stroke();
-      // inner stroke colorato leggero
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(120,255,178,0.25)';
-      ctx.stroke();
-      // shadow soft
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.45)';
-      ctx.shadowBlur = px(14);
-      ctx.shadowOffsetY = px(2);
-      roundRectPath(x, y, w, h, px(14));
-      ctx.strokeStyle = 'rgba(0,0,0,0)';
-      ctx.stroke();
-      ctx.restore();
+      ctx.fillStyle = COLOR.glass; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = COLOR.stroke; ctx.stroke();
+      ctx.lineWidth = 1; ctx.strokeStyle = COLOR.stroke2; ctx.stroke();
+      // outer glow shadow
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = px(14); ctx.shadowOffsetY = px(2);
+      roundRectPath(x, y, w, h, px(14)); ctx.strokeStyle = 'rgba(0,0,0,0)'; ctx.stroke(); ctx.restore();
     }
-    function text(opts){ const { str,x,y,size=20,weight=400,color=COLOR.text,align='left',baseline='alphabetic'}=opts; ctx.fillStyle=color; ctx.font = `${weight} ${size}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`; ctx.textAlign=align; ctx.textBaseline=baseline; ctx.fillText(str,x,y); }
+    function drawPanel(x, y, w, h){ // cornice più marcata per la tabella
+      roundRectPath(x, y, w, h, px(16));
+      ctx.fillStyle = 'rgba(0,0,0,0.52)'; ctx.fill();
+      // bordo triplo
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(120,255,178,0.35)'; ctx.stroke();
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,95,210,0.30)'; ctx.stroke();
+      // header shine
+      const g = ctx.createLinearGradient(x, y, x, y+px(54));
+      g.addColorStop(0, 'rgba(255,255,255,0.12)');
+      g.addColorStop(1, 'rgba(255,255,255,0.00)');
+      ctx.fillStyle = g; ctx.fillRect(x+px(2), y+px(2), w-px(4), px(54));
+    }
+    function text(opts){ const { str,x,y,size=20,weight=400,color=COLOR.text,align='left',baseline='alphabetic',shadow=false }=opts; ctx.save(); if (shadow){ ctx.shadowColor='rgba(0,0,0,0.55)'; ctx.shadowBlur=px(12); ctx.shadowOffsetY=px(2);} ctx.fillStyle=color; ctx.font = `${weight} ${size}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`; ctx.textAlign=align; ctx.textBaseline=baseline; ctx.fillText(str,x,y); ctx.restore(); }
     function fitNumber(n, maxDp){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); const dp = abs >= 1 ? Math.min(maxDp, 2) : Math.min(maxDp, 6); return n.toLocaleString(undefined, { maximumFractionDigits: dp }); }
     function money(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }); }
     function formatSupplyCompact(n){ if (typeof n !== 'number' || !isFinite(n)) return '—'; const abs = Math.abs(n); if (abs >= 1e9) return (n/1e9).toLocaleString(undefined,{ maximumFractionDigits: 3 })+' B'; if (abs >= 1e6) return (n/1e6).toLocaleString(undefined,{ maximumFractionDigits: 3 })+' M'; if (abs >= 1e3) return (n/1e3).toLocaleString(undefined,{ maximumFractionDigits: 3 }); return n.toLocaleString(undefined,{ maximumFractionDigits: 3 }); }
-    function shorten(addr){ return (addr && addr.length>14) ? addr.slice(0,8)+'…'+addr.slice(-6) : addr; }
 
     function drawBackground(w, h){
-      // darker bottom for readability
-      const grad = ctx.createLinearGradient(0,0,0,h);
-      grad.addColorStop(0, 'rgba(0,0,0,0.12)');
-      grad.addColorStop(1, 'rgba(0,0,0,0.40)');
-
       const bmp = mainBitmap || thumbBitmap;
+      const baseGrad = ctx.createLinearGradient(0,0,0,h);
+      baseGrad.addColorStop(0, 'rgba(0,0,0,0.12)'); baseGrad.addColorStop(1, 'rgba(0,0,0,0.40)');
       if (bmp){
         const imgW = bmp.width, imgH = bmp.height;
         const scale = (FIT_MODE==='cover') ? Math.max(w/imgW, h/imgH) : Math.min(w/imgW, h/imgH);
@@ -183,7 +169,7 @@
         const sx = Math.max(0, Math.min(imgW - sw, cx - Math.round(sw/2)));
         const sy = Math.max(0, Math.min(imgH - sh, cy - Math.round(sh/2)));
         ctx.drawImage(bmp, sx, sy, sw, sh, 0, 0, w, h);
-        ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+        ctx.fillStyle = baseGrad; ctx.fillRect(0,0,w,h);
       } else { ctx.fillStyle = '#0b0b12'; ctx.fillRect(0,0,w,h); }
     }
 
@@ -194,14 +180,14 @@
       drawBackground(w,h);
       linkHitboxes = [];
 
-      // GitHub pill
+      // GitHub pill (alto dx)
       (function gh(){ const label='GitHub'; const padX=px(10), padY=px(6); ctx.font=`700 ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const tw=ctx.measureText(label).width; const bw=Math.ceil(tw+padX*2), bh=Math.ceil(px(28)); const bx=Math.floor(w-bw-px(12)); const by=Math.floor(px(12)); drawGlass(bx,by,bw,bh); text({str:label,x:bx+Math.floor(bw/2),y:by+Math.floor(bh/2)+1,size:px(12),weight:700,color:COLOR.text,align:'center',baseline:'middle'}); linkHitboxes.push({x:bx,y:by,w:bw,h:bh,url:GITHUB_REPO_URL}); })();
 
       const dataReady = !!(burn && price);
       const uiReady = (!!mainBitmap && dataReady) || (!DRAW_UI_ONLY_WHEN_READY);
       if (!uiReady) return;
 
-      // === Container unico: cards in alto + mini info + tabella sotto ===
+      // === Dati ===
       const labelSize = px(12), labelWeight = 700;
       const valueSize = px(22), valueWeight = 800;
       const padX = px(14), padY = px(10), vGap = px(6);
@@ -209,156 +195,161 @@
       const totalTokens = burn?.totalUi ? Number(burn.totalUi) : 0;
       const pxUsd = price?.priceUsd ? Number(price.priceUsd) : 0;
       const totalUsd = (price?.burnTotalUsd != null) ? Number(price.burnTotalUsd) : (totalTokens * pxUsd);
+      const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number') ? price.totalSupplyTokensNum : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
 
       const rowsAll = (burn?.burns || []);
       const maxRows = w < 520 ? 8 : (w < 900 ? 12 : 20);
       const rows = rowsAll.slice(0, maxRows);
 
-      // dimensioni principali
-      const tableW = Math.min(Math.max(px(420), Math.floor(w*0.92)), px(1100));
+      // === Misure contenitore e pannello tabella ===
+      const tableW = Math.min(Math.max(px(480), Math.floor(w*0.92)), px(1200));
       const rowH   = px(24), headH = px(32), tPad = px(12);
 
-      // Top row: due card dentro al contenitore
-      // calcolo larghezze card (fit-to-text)
-      const label1 = 'Total burned';
-      const value1 = `${fitNumber(totalTokens, 6)} BUMPER`;
-      ctx.font = `${labelWeight} ${labelSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      const c1LabelW = ctx.measureText(label1).width;
-      ctx.font = `${valueWeight} ${valueSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      const c1ValueW = ctx.measureText(value1).width;
-      const card1W = Math.ceil(Math.max(c1LabelW, c1ValueW) + padX*2);
-      const card1H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
-
-      const label2 = 'Total USD burned';
-      const value2 = money(totalUsd);
-      ctx.font = `${labelWeight} ${labelSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      const c2LabelW = ctx.measureText(label2).width;
-      ctx.font = `${valueWeight} ${valueSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      const c2ValueW = ctx.measureText(value2).width;
-      const card2W = Math.ceil(Math.max(c2LabelW, c2ValueW) + padX*2);
-      const card2H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
-
+      // top row: titolo (centro) + due card a destra
+      // misura card 1
+      const label1 = 'Total burned'; const value1 = `${fitNumber(totalTokens, 6)} TOKEN`;
+      ctx.font = `${labelWeight} ${labelSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const c1LabelW = ctx.measureText(label1).width;
+      ctx.font = `${valueWeight} ${valueSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const c1ValueW = ctx.measureText(value1).width;
+      const card1W = Math.ceil(Math.max(c1LabelW, c1ValueW) + padX*2); const card1H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
+      // card 2
+      const label2 = 'Total USD burned'; const value2 = money(totalUsd);
+      ctx.font = `${labelWeight} ${labelSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const c2LabelW = ctx.measureText(label2).width;
+      ctx.font = `${valueWeight} ${valueSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`; const c2ValueW = ctx.measureText(value2).width;
+      const card2W = Math.ceil(Math.max(c2LabelW, c2ValueW) + padX*2); const card2H = Math.ceil(padY*2 + labelSize + vGap + valueSize);
       const cardsH = Math.max(card1H, card2H);
-      const cardsGap = Math.min(px(24), Math.floor(tableW*0.06));
 
-      // Seconda riga: mini info (supply, last updated, burn address)
+      // titolo centrale grande
+      const titleText = 'NUMMUS BURN';
+      ctx.font = `900 ${px(34)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
+      const titleW = Math.ceil(ctx.measureText(titleText).width);
+      const titlePadX = px(24), titlePadY = px(16);
+      const titleCardW = Math.max(titleW + titlePadX*2, px(360));
+      const titleCardH = px(68);
+
+      // Altezza pannello: header (titolo+card) + mini info + tabella
       const miniH = px(40), miniGap = px(10);
+      const tableRowsH = headH + Math.max(1, rows.length) * rowH + tPad*2 + px(6); // extra spazio per righe
+      const headerBlockH = Math.max(titleCardH, cardsH);
+      const panelH = tPad + headerBlockH + tPad + miniH + tPad + tableRowsH + tPad;
 
-      const supplyNum = (price && typeof price.totalSupplyTokensNum === 'number') ? price.totalSupplyTokensNum : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
-      const supplyStr = `Total supply: ${formatSupplyCompact(supplyNum)}`;
-      ctx.font = `700 ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      let meas = ctx.measureText(supplyStr);
-      const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(360));
+      const panelX = Math.floor((w - tableW)/2);
+      let panelY = Math.floor(h * CONTAINER_TOP_Y_PCT);
+      if (panelY < px(16)) panelY = px(16);
+      if (panelY + panelH > h - px(12)) panelY = Math.max(px(12), h - px(12) - panelH);
 
-      const updated = price?.updatedAt || burn?.updatedAt || null;
-      const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
-      meas = ctx.measureText(updatedStr);
-      const updW = Math.min(Math.max(meas.width + px(24), px(220)), px(420));
+      // Disegno pannello tabella (cornice marcata)
+      drawPanel(panelX, panelY, tableW, panelH);
 
-      const midFreeW = Math.max(0, tableW - (supplyW + updW + px(24))); // spazio centrale per burn address
+      // --- HEADER: titolo al centro, due card a destra ---
+      const headerY = panelY + tPad;
+      // titolo centrale con effetto "fuoco"
+      (function drawTitle(){
+        const tx = panelX + Math.floor(tableW/2) - Math.floor(titleCardW/2);
+        const ty = headerY + Math.floor((headerBlockH - titleCardH)/2);
+        drawGlass(tx, ty, titleCardW, titleCardH);
+        // testo con gradiente "fire"
+        const gx = tx + titlePadX, gy = ty + titlePadY;
+        const grad = ctx.createLinearGradient(0, gy, 0, gy + px(36));
+        grad.addColorStop(0, '#fff1a6');
+        grad.addColorStop(0.5, '#ffb347');
+        grad.addColorStop(1, '#ff6a00');
+        // glow
+        ctx.save();
+        ctx.shadowColor = 'rgba(255,110,0,0.55)';
+        ctx.shadowBlur = px(16);
+        ctx.shadowOffsetY = px(2);
+        ctx.fillStyle = grad;
+        ctx.font = `900 ${px(34)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(titleText, gx, gy);
+        ctx.restore();
+      })();
 
-      // Altezza contenitore totale
-      const tableRowsH = headH + Math.max(1, rows.length) * rowH + tPad*2;
-      const containerH = tPad + cardsH + tPad + miniH + tPad + tableRowsH + tPad;
+      // due card a destra (allineate al bordo del pannello)
+      const rightBlockW = card1W + px(18) + card2W;
+      const rBlockX = panelX + tableW - tPad - rightBlockW;
+      const c1x = rBlockX;
+      const c2x = rBlockX + card1W + px(18);
+      const cardsY = headerY + Math.floor((headerBlockH - cardsH)/2);
 
-      // Posizionamento contenitore
-      const containerX = Math.floor((w - tableW)/2);
-      let   containerY = Math.floor(h * CONTAINER_TOP_Y_PCT);
-      if (containerY < px(12)) containerY = px(12); // non andare troppo su
-      if (containerY + containerH > h - px(12)) containerY = Math.max(px(12), h - px(12) - containerH);
-
-      // Disegno contenitore
-      drawGlass(containerX, containerY, tableW, containerH);
-
-      // --- RIGA 1: tre elementi: (sx) Burn address card, (centro) due card Total ---
-      const cardsY = containerY + tPad;
-
-      // Burn address card (sinistra)
-      const burnLbl = `Burn address`;
-      const burnVal = shorten(BURN_ADDRESS);
-      ctx.font = `${labelWeight} ${labelSize}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      const baLblW = ctx.measureText(burnLbl).width;
-      ctx.font = `${valueWeight} ${valueSize - px(6)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
-      const baValW = ctx.measureText(burnVal).width;
-      const burnW = Math.ceil(Math.max(baLblW, baValW) + padX*2);
-      const burnH = Math.ceil(padY*2 + labelSize + vGap + (valueSize - px(6)));
-      const burnX = containerX + tPad;
-
-      drawGlass(burnX, cardsY, burnW, burnH);
-      text({ str: burnLbl, x: burnX + padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
-      text({ str: burnVal, x: burnX + padX, y: cardsY + padY + labelSize + vGap, size: valueSize - px(6), weight: valueWeight, color: COLOR.link, baseline: 'top' });
-      // hitbox burn
-      linkHitboxes.push({ x: burnX, y: cardsY, w: burnW, h: burnH, url: BURN_SOLSCAN_URL });
-
-      // due card centrali (Total burned + Total USD burned)
-      const gapMid = Math.min(px(18), Math.floor(tableW*0.04));
-      const centerBlockW = card1W + gapMid + card2W;
-      const cCenterX = containerX + Math.floor(tableW/2);
-      const cBlockX = cCenterX - Math.floor(centerBlockW/2);
-      const c1x = cBlockX;
-      const c2x = cBlockX + card1W + gapMid;
-
-      // card 1
+      // card 1: Total burned
       drawGlass(c1x, cardsY, card1W, card1H);
       text({ str: label1, x: c1x + padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, baseline: 'top' });
       text({ str: value1, x: c1x + padX, y: cardsY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent, baseline: 'top' });
 
-      // card 2
+      // card 2: Total USD burned
       drawGlass(c2x, cardsY, card2W, card2H);
       text({ str: label2, x: c2x + card2W - padX, y: cardsY + padY + 2, size: labelSize, weight: labelWeight, color: COLOR.muted, align: 'right', baseline: 'top' });
       text({ str: value2, x: c2x + padX, y: cardsY + padY + labelSize + vGap, size: valueSize, weight: valueWeight, color: COLOR.accent2, baseline: 'top' });
 
-      // --- RIGA 2: mini info (sx supply, centro VUOTO, dx updated) ---
-      const miniY = cardsY + cardsH + tPad;
-
+      // --- MINI INFO ROW ---
+      const miniY = headerY + headerBlockH + tPad;
       // supply sx
-      const supplyX = containerX + tPad;
+      const supplyStr = `Total supply: ${formatSupplyCompact(supplyNum)}`;
+      ctx.font = `700 ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
+      let meas = ctx.measureText(supplyStr);
+      const supplyW = Math.min(Math.max(meas.width + px(24), px(220)), px(380));
+      const supplyX = panelX + tPad;
       drawGlass(supplyX, miniY, supplyW, miniH);
       text({ str: supplyStr, x: supplyX + px(12), y: miniY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.text });
 
       // updated dx
-      const updX = containerX + tableW - tPad - updW;
+      const updated = price?.updatedAt || burn?.updatedAt || null;
+      const updatedStr = updated ? `Last updated: ${new Date(updated).toLocaleString()}` : 'Last updated: —';
+      meas = ctx.measureText(updatedStr);
+      const updW = Math.min(Math.max(meas.width + px(24), px(220)), px(460));
+      const updX = panelX + tableW - tPad - updW;
       drawGlass(updX, miniY, updW, miniH);
       text({ str: updatedStr, x: updX + px(12), y: miniY + Math.floor(miniH/2)+1, size: px(12), weight: 700, baseline: 'middle', color: COLOR.muted });
 
-      // (centro lasciato libero per respiro visivo)
-
-      // --- RIGA 3: tabella burns ---
-      const tableX = containerX + tPad;
+      // --- TABELLA ---
+      const tableX = panelX + tPad;
       const tableY = miniY + miniH + tPad;
       const tableInnerW = tableW - tPad*2;
+      const tableH = headH + Math.max(1, rows.length) * rowH + tPad*2 + px(6);
 
-      // titolo sezione
-      text({ str: 'Recent burns', x: tableX + px(10), y: tableY + px(6), size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      // cornice interna visibile per l'area tabella
+      drawPanel(tableX, tableY, tableInnerW, tableH);
+
+      // header barra
+      const headerBarH = px(36);
+      const hbGrad = ctx.createLinearGradient(tableX, tableY, tableX, tableY + headerBarH);
+      hbGrad.addColorStop(0, 'rgba(255,255,255,0.10)');
+      hbGrad.addColorStop(1, 'rgba(255,255,255,0.00)');
+      ctx.fillStyle = hbGrad; ctx.fillRect(tableX+px(2), tableY+px(2), tableInnerW-px(4), headerBarH);
+
+      text({ str: 'Recent burns', x: tableX + px(12), y: tableY + px(10), size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
       // intestazioni
-      const headersY = tableY + px(28);
-      text({ str: '#',                   x: tableX+px(10),                         y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
-      text({ str: 'Amount (token)',      x: tableX+px(10)+px(32)+8,                y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
-      text({ str: 'Transaction',         x: tableX+px(10)+px(32)+Math.max(px(150), Math.floor(tableInnerW*0.28))+8, y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
-
+      const headersY = tableY + headerBarH + px(4);
       const colIndexW = px(32);
-      const colQtyW   = Math.max(px(150), Math.floor(tableInnerW*0.28));
-      const rowStartY = headersY + px(22);
+      const colQtyW   = Math.max(px(150), Math.floor(tableInnerW*0.30));
+      text({ str: '#',                   x: tableX+px(12),                         y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      text({ str: 'Amount (token)',      x: tableX+px(12)+colIndexW+8,              y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
+      text({ str: 'Transaction',         x: tableX+px(12)+colIndexW+colQtyW+8,      y: headersY, size: px(12), color: COLOR.muted, weight: 800, baseline: 'top' });
 
+      // righe
+      const rowStartY = headersY + px(22);
       if (rows.length === 0){
-        text({ str: 'No burns found.', x: tableX+px(10), y: rowStartY+px(6), size: px(14), color: COLOR.muted, weight: 700, baseline: 'top' });
+        text({ str: 'No burns found.', x: tableX+px(12), y: rowStartY+px(6), size: px(14), color: COLOR.muted, weight: 700, baseline: 'top' });
       } else {
         for (let i=0; i<rows.length; i++){
           const ry = rowStartY + i*rowH;
           const row = rows[i]; const qty = Number(row.amountUi || 0); const url = row.url || '#';
-          text({ str: String(i+1), x: tableX+px(10), y: ry+Math.floor(rowH*0.68), size: px(12), color: COLOR.text, weight: 700 });
-          text({ str: fitNumber(qty, 6), x: tableX+px(10)+colIndexW+8, y: ry+Math.floor(rowH*0.68), size: px(14), color: COLOR.text, weight: 800 });
+          // linea separatrice
+          ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tableX+px(10), ry+Math.floor(rowH*0.15)); ctx.lineTo(tableX+tableInnerW-px(10), ry+Math.floor(rowH*0.15)); ctx.stroke();
+          text({ str: String(i+1), x: tableX+px(12), y: ry+Math.floor(rowH*0.68), size: px(12), color: COLOR.text, weight: 700 });
+          text({ str: fitNumber(qty, 6), x: tableX+px(12)+colIndexW+8, y: ry+Math.floor(rowH*0.68), size: px(14), color: COLOR.text, weight: 800 });
           const linkStr = 'Open on Solscan';
           ctx.font = `700 ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
           ctx.fillStyle = COLOR.link; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-          ctx.fillText(linkStr, tableX+px(10)+colIndexW+colQtyW+8, ry+Math.floor(rowH*0.68));
+          ctx.fillText(linkStr, tableX+px(12)+colIndexW+colQtyW+8, ry+Math.floor(rowH*0.68));
           const m2 = ctx.measureText(linkStr);
-          linkHitboxes.push({ x: tableX+px(10)+colIndexW+colQtyW+8, y: ry - Math.floor(rowH*0.2), w: m2.width, h: Math.floor(rowH*0.9), url });
+          linkHitboxes.push({ x: tableX+px(12)+colIndexW+colQtyW+8, y: ry - Math.floor(rowH*0.2), w: m2.width, h: Math.floor(rowH*0.9), url });
         }
       }
 
-      // --- Badge prezzo in basso ---
+      // --- Token price badge ---
       const priceStr = (pxUsd ? pxUsd.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—');
       const priceLabel = `Token price: ${priceStr} USD`;
       ctx.font = `700 ${px(16)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
