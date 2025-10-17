@@ -3,7 +3,7 @@
 
 /**
  * scripts/price.js
- * - Prezzo USD di BUMPER da DexScreener (sceglie il pair con più liquidità)
+ * - Prezzo USD di NUMMUS da DexScreener (sceglie il pair con più liquidità)
  * - Total supply via Helius getTokenSupply
  * - Legge data/burn.json -> totalUi e calcola burnTotalUsd = priceUsd * totalUi
  * - Scrive atomicamente data/price.json:
@@ -18,7 +18,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const BUMPER_MINT = "5bp5PwTyu4i1hGyQsRwRYqiR2CmxyHt2cPJGEbXEbonk";
+const NUMMUS_MINT = "9JK2U7aEkp3tWaFNuaJowWRgNys5DVaKGxWk73VT5ray";
 
 const API_KEY = process.env.HELIUS_API_KEY || process.env.HELIUS_APY_KEY;
 if (!API_KEY) {
@@ -39,7 +39,7 @@ async function fetchJson(url, { timeoutMs = 10000 } = {}) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), timeoutMs);
   const res = await fetch(url, {
-    headers: { "accept": "application/json", "user-agent": "BumperBurnBot/1.0 (+https://github.com/)" },
+    headers: { "accept": "application/json", "user-agent": "NummusBurnBot/1.0 (+https://github.com/)" },
     signal: ac.signal
   });
   clearTimeout(t);
@@ -130,10 +130,10 @@ async function readBurnTotalUiWithRetry(file, attempts = 8, delayMs = 250) {
 /* ---------- Main ---------- */
 (async () => {
   // 1) prezzo USD
-  const priceUsd = await getPriceFromDexScreener(BUMPER_MINT);
+  const priceUsd = await getPriceFromDexScreener(NUMMUS_MINT);
 
   // 2) supply totale
-  const supply = await getTotalSupply(BUMPER_MINT);
+  const supply = await getTotalSupply(NUMMUS_MINT);
 
   // 3) totale bruciato in token (dal file data/burn.json)
   const burnJsonPath = path.join(process.cwd(), "data", "burn.json");
@@ -144,21 +144,21 @@ async function readBurnTotalUiWithRetry(file, attempts = 8, delayMs = 250) {
 
   // 5) scrivi output
   const payload = {
-    mint: BUMPER_MINT,
+    mint: NUMMUS_MINT,
     priceUsd,
     totalSupplyTokens: supply.supplyUiStr,
     totalSupplyTokensNum: supply.supplyUiNum,
     supplyRaw: supply.supplyRaw,
     decimals: supply.decimals,
     burnTotalTokens,   // <-- letto da burn.json (totalUi)
-    burnTotalUsd,      // <-- nuovo campo richiesto
+    burnTotalUsd,      // <-- valore USD bruciato
     updatedAt: new Date().toISOString()
   };
 
   const outPath = path.join(process.cwd(), "data", "price.json");
   writeJsonAtomic(outPath, payload);
 
-  console.log(`Prezzo USD BUMPER (DexScreener): ${priceUsd}`);
+  console.log(`Prezzo USD NUMMUS (DexScreener): ${priceUsd}`);
   console.log(`Total supply (tokens): ${supply.supplyUiStr}`);
   console.log(`Totale bruciato (token): ${burnTotalTokens}`);
   console.log(`Valore bruciato (USD): ${burnTotalUsd}`);
