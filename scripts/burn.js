@@ -3,7 +3,7 @@
 
 /**
  * scripts/burn.js
- * - Scansiona i burn del mint BUMPER dal wallet burner
+ * - Scansiona i burn del mint NUMMUS dal wallet burner
  * - Stampa i risultati a terminale
  * - Salva data/burn.json con:
  *   { count, totalUi, burns: [ { amountUi, url } ] }
@@ -13,7 +13,7 @@ const fs = require("fs");
 const path = require("path");
 
 const BURNER_ADDRESS = "5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE";
-const BUMPER_MINT    = "5bp5PwTyu4i1hGyQsRwRYqiR2CmxyHt2cPJGEbXEbonk";
+const NUMMUS_MINT    = "9JK2U7aEkp3tWaFNuaJowWRgNys5DVaKGxWk73VT5ray";
 
 const API_KEY = process.env.HELIUS_API_KEY || process.env.HELIUS_APY_KEY;
 if (!API_KEY) {
@@ -110,7 +110,7 @@ function findBurnEvents(tx, mint, mintDecimals) {
           let raw = BigInt(rawStr);
           raw = normalizeRawAmount(raw, decimals, mintDecimals);
           burns.push({ raw });
-        } catch { /* ignore parse error */ }
+        } catch { /* ignore */ }
       }
     }
   };
@@ -122,7 +122,6 @@ function findBurnEvents(tx, mint, mintDecimals) {
   return burns;
 }
 
-// scrittura atomica per evitare file vuoti
 function writeJsonAtomic(outPath, obj) {
   const tmpPath = outPath + ".tmp";
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -131,7 +130,7 @@ function writeJsonAtomic(outPath, obj) {
 }
 
 (async () => {
-  const mintDecimals = await getDecimals(BUMPER_MINT);
+  const mintDecimals = await getDecimals(NUMMUS_MINT);
   let totalRaw = 0n;
   const result = { count: 0, totalUi: "0", burns: [] };
 
@@ -143,7 +142,7 @@ function writeJsonAtomic(outPath, obj) {
     }]);
     if (!tx) continue;
 
-    const burns = findBurnEvents(tx, BUMPER_MINT, mintDecimals);
+    const burns = findBurnEvents(tx, NUMMUS_MINT, mintDecimals);
     for (const b of burns) {
       totalRaw += b.raw;
       result.count += 1;
@@ -151,19 +150,19 @@ function writeJsonAtomic(outPath, obj) {
         amountUi: bigIntToDecimalString(b.raw, mintDecimals),
         url: `https://solscan.io/tx/${sig}`,
       });
-      console.log(`${bigIntToDecimalString(b.raw, mintDecimals)} BUMPER  |  https://solscan.io/tx/${sig}`);
+      console.log(`${bigIntToDecimalString(b.raw, mintDecimals)} NUMMUS  |  https://solscan.io/tx/${sig}`);
     }
 
-    await sleep(SLEEP_MS); // anti-rate-limit
+    await sleep(SLEEP_MS);
   }
 
   result.totalUi = bigIntToDecimalString(totalRaw, mintDecimals);
 
   if (result.count > 0) {
     console.log("-".repeat(80));
-    console.log(`Totale burn trovato: ${result.totalUi} BUMPER in ${result.count} transazioni`);
+    console.log(`Totale burn trovato: ${result.totalUi} NUMMUS in ${result.count} transazioni`);
   } else {
-    console.log("Nessun burn BUMPER trovato nelle transazioni scansionate.");
+    console.log("Nessun burn NUMMUS trovato nelle transazioni scansionate.");
   }
 
   const outPath = path.join(process.cwd(), "data", "burn.json");
