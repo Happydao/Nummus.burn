@@ -1,159 +1,196 @@
 <!doctype html>
 <html lang="it">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NUMMUS — BURN LIVE</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>NUMMUS BURN — Live</title>
+
+<!-- FONT ROMANO CINZEL -->
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&display=swap" rel="stylesheet">
 
 <style>
-    *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;}
-
+    *{margin:0;padding:0;box-sizing:border-box;}
     body{
+        font-family:'Cinzel', serif;
+        color:#fff;
         background:black;
         overflow-x:hidden;
-        color:#fff;
-        text-shadow:0 0 8px #ff0000;
     }
 
-    /* SFONDO VIDEO */
+    /* VIDEO SFONDO */
     #bgvid{
         position:fixed;
-        top:0; left:0;
+        top:0;left:0;
         width:100vw;
         height:100vh;
         object-fit:cover;
-        z-index:-2;
-        filter:brightness(0.55) saturate(1.4);
+        z-index:-3;
+        filter:brightness(0.55) contrast(1.3);
     }
 
-    /* OVERLAY SCURO */
+    /* OVERLAY */
     #overlay{
         position:fixed;
         top:0;left:0;
         width:100vw;height:100vh;
         background:rgba(0,0,0,0.45);
-        z-index:-1;
+        z-index:-2;
     }
 
-    /* HEADER CON LOGHI */
-    header{
-        width:100%;
-        padding:20px 0;
-        display:flex;
-        justify-content:center;
-        align-items:center;
+    /* HEADER CARD */
+    .titleCard{
+        width:90%;
+        max-width:900px;
+        margin:25px auto 10px auto;
+        background:rgba(20,20,20,0.65);
+        border:2px solid rgba(200,160,90,0.7);
+        border-radius:18px;
+        padding:20px;
+        text-align:center;
         position:relative;
+        backdrop-filter:blur(4px);
+        transition:0.2s;
+        box-shadow:0 0 18px rgba(0,0,0,0.7);
+    }
+    .titleCard:hover{
+        border-color:#ff2a2a;
+        box-shadow:0 0 20px #ff0000;
     }
 
+    .title{
+        font-size:36px;
+        font-weight:800;
+        color:#f2e7c9;
+        letter-spacing:2px;
+        text-shadow:0 0 6px rgba(255,255,255,0.15);
+    }
+
+    /* LOGHI */
     .logo{
-        width:90px;
-        height:90px;
+        width:110px;
+        height:110px;
         object-fit:contain;
         position:absolute;
-        top:10px;
-        animation:pulseFire 1.3s infinite alternate;
-        filter:drop-shadow(0 0 10px red);
+        top:50%;
+        transform:translateY(-50%);
+        filter:drop-shadow(0 0 6px #ff0000);
+        animation:glow 1.6s infinite alternate ease-in-out;
     }
 
-    #logoLeft{ left:20px; }
-    #logoRight{ right:20px; }
-
-    @keyframes pulseFire {
-        0%{ filter:drop-shadow(0 0 4px #ff0000); transform:scale(1);}
-        100%{ filter:drop-shadow(0 0 16px #ff3b00); transform:scale(1.08);}
+    @keyframes glow{
+        0%{filter:drop-shadow(0 0 6px #ff0000) brightness(1);}
+        100%{filter:drop-shadow(0 0 18px #ff3b00) brightness(1.15);}
     }
 
-    /* TITOLO CENTRALE */
-    h1{
-        font-size:42px;
-        letter-spacing:2px;
-        font-weight:900;
-        text-align:center;
+    #logoLeft{left:-130px;}
+    #logoRight{right:-130px;}
+
+    /* Per mobile: loghi più vicini e più piccoli */
+    @media(max-width:750px){
+        #logoLeft{
+            left:-90px;
+            width:80px;height:80px;
+        }
+        #logoRight{
+            right:-90px;
+            width:80px;height:80px;
+        }
+        .title{font-size:27px;}
+    }
+
+    /* GITHUB BADGE */
+    #githubBtn{
+        position:fixed;
+        top:15px;
+        right:15px;
+        background:rgba(30,30,30,0.7);
+        border:1px solid rgba(255,255,255,0.3);
+        padding:8px 12px;
+        border-radius:12px;
+        color:#fff;
+        text-decoration:none;
+        font-size:14px;
+        backdrop-filter:blur(3px);
+        transition:0.2s;
+        z-index:10;
+    }
+    #githubBtn:hover{
+        border-color:#ff2a2a;
         color:#ff2a2a;
-        text-shadow:
-            0 0 10px #ff0000,
-            0 0 20px #ff0000,
-            0 0 40px #ff0000;
     }
 
-    /* CONTENITORE PRINCIPALE */
+    /* MAIN WRAPPER */
     #main{
-        width:90%;
-        max-width:1100px;
+        width:92%;
+        max-width:1200px;
         margin:20px auto;
-        padding-top:20px;
     }
 
-    /* CARD STATISTICHE */
-    .cardRow{
-        display:flex;
-        justify-content:space-between;
-        gap:15px;
-        margin-bottom:25px;
+    /* CARDS */
+    .cards{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+        gap:18px;
+        margin-top:20px;
     }
 
     .card{
-        flex:1;
-        background:rgba(10,10,10,0.55);
-        border:1px solid rgba(255,60,60,0.45);
+        background:rgba(15,15,15,0.6);
         border-radius:14px;
-        padding:15px;
+        padding:18px;
+        border:2px solid rgba(180,140,70,0.5);
         backdrop-filter:blur(4px);
-        box-shadow:0 0 12px rgba(255,40,40,0.45);
+        box-shadow:0 0 14px rgba(0,0,0,0.6);
         transition:0.2s;
     }
-
     .card:hover{
-        box-shadow:0 0 22px rgba(255,80,80,0.85);
-        transform:translateY(-3px);
+        border-color:#ff2a2a;
+        box-shadow:0 0 20px #ff0000;
     }
 
     .card label{
-        font-size:12px;
-        color:#ffaaaa;
-        font-weight:700;
-        text-transform:uppercase;
-        letter-spacing:1px;
+        font-size:13px;
+        color:#e5d7b2;
+        font-weight:600;
+    }
+    .value{
+        font-size:22px;
+        margin-top:6px;
+        font-weight:800;
+        color:#fff;
+        text-shadow:0 0 6px rgba(255,255,255,0.2);
     }
 
-    .card .value{
-        font-size:20px;
-        font-weight:900;
-        margin-top:5px;
-        color:#ff3b3b;
-        text-shadow:0 0 10px #ff0000;
-    }
-
-    /* TABELLA TRANSAZIONI */
+    /* TABE*/
     table{
         width:100%;
-        margin-top:15px;
+        margin-top:30px;
         border-collapse:collapse;
-        background:rgba(0,0,0,0.55);
-        backdrop-filter:blur(4px);
-        border-radius:12px;
+        background:rgba(15,15,15,0.55);
+        border-radius:14px;
         overflow:hidden;
-        border:1px solid rgba(255,40,40,0.45);
-        box-shadow:0 0 12px rgba(255,30,30,0.55);
+        border:2px solid rgba(180,140,70,0.5);
+        box-shadow:0 0 15px rgba(0,0,0,0.5);
+        backdrop-filter:blur(3px);
     }
 
     table thead{
-        background:rgba(50,0,0,0.55);
+        background:rgba(60,40,20,0.35);
     }
 
-    table th{
+    th{
         padding:12px;
         text-align:left;
-        font-size:13px;
-        color:#ff8080;
-        text-transform:uppercase;
-        font-weight:700;
+        font-size:14px;
+        color:#e5d7b2;
     }
 
-    table td{
+    td{
         padding:10px;
-        border-bottom:1px solid rgba(255,40,40,0.25);
-        font-size:14px;
+        border-bottom:1px solid rgba(180,140,70,0.25);
+        font-size:15px;
+        color:#fff;
     }
 
     tr:hover{
@@ -161,39 +198,40 @@
     }
 
     .link{
-        color:#ff5555;
-        font-weight:700;
+        color:#ff3b3b;
         text-decoration:none;
-        text-shadow:0 0 10px #ff0000;
+        font-weight:700;
     }
-
     .link:hover{
-        color:#ffffff;
+        color:#fff;
     }
 
 </style>
 </head>
 
-
 <body>
 
 <!-- VIDEO SFONDO -->
 <video id="bgvid" autoplay muted loop playsinline>
-    <source src="burn.mp4" type="video/mp4">
+    <source src="/burn.mp4" type="video/mp4">
 </video>
-
 <div id="overlay"></div>
 
-<header>
-    <img id="logoLeft" class="logo" src="nummus.png">
-    <h1>NUMMUS BURN — LIVE</h1>
-    <img id="logoRight" class="logo" src="nummus.png">
-</header>
+<!-- GITHUB -->
+<a id="githubBtn" href="https://github.com/Happydao/Nummus.burn" target="_blank">GitHub</a>
+
+<!-- TITOLO IN CARD -->
+<div class="titleCard">
+    <img src="/nummus.png" id="logoLeft" class="logo">
+    <img src="/nummus.png" id="logoRight" class="logo">
+    <div class="title">NUMMUS — BURN LIVE</div>
+</div>
 
 <div id="main">
 
     <!-- CARDS -->
-    <div class="cardRow">
+    <div class="cards">
+
         <div class="card">
             <label>Total Burned</label>
             <div class="value" id="burnTotal">—</div>
@@ -212,9 +250,19 @@
         <div class="card">
             <label>Nummus Price</label>
             <div class="value" id="priceNummus">—</div>
-            <label style="margin-top:10px;">Last Update</label>
+            <label style="display:block;margin-top:12px;">Last Update</label>
             <div class="value" id="update">—</div>
         </div>
+
+        <div class="card">
+            <label>Burn Address</label>
+            <div class="value">
+                <a class="link" href="https://solscan.io/account/5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE" target="_blank">
+                    5G62fW1B…SPUYE
+                </a>
+            </div>
+        </div>
+
     </div>
 
     <!-- TABELLA -->
@@ -227,7 +275,7 @@
             </tr>
         </thead>
         <tbody id="burnRows">
-            <tr><td colspan="3" style="text-align:center;padding:20px;">Loading…</td></tr>
+            <tr><td colspan="3" style="padding:20px;text-align:center;">Loading…</td></tr>
         </tbody>
     </table>
 
