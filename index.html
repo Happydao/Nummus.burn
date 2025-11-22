@@ -104,7 +104,7 @@ body{
 .titleCard{
   flex:1;
   background:rgba(10,10,10,0.22);
-  border:2px solid rgba(135,35,35,0.9); /* rosso statico */
+  border:2px solid rgba(135,35,35,0.9);
   border-radius:18px;
   padding:18px 10px;
   text-align:center;
@@ -116,29 +116,28 @@ body{
   box-shadow:0 0 28px rgba(80,0,0,0.85);
 }
 
-/* TITOLO CON BAGLIORE ROSSO PULSANTE */
+/* TITOLO CON GLOW ROSSO PULSANTE, STILE LOGHI */
 .title{
   font-size:32px;
   font-weight:800;
   color:#f1e5c6;
   letter-spacing:2px;
-  text-shadow:
-    0 2px 4px rgba(0,0,0,0.9),
-    0 0 4px rgba(255,255,255,0.15);
-  animation:titleGlow 2.1s infinite alternate ease-in-out;
+  animation:titleGlow 1.9s infinite alternate ease-in-out;
 }
 @keyframes titleGlow{
   0%{
     text-shadow:
-      0 2px 4px rgba(0,0,0,0.9),
-      0 0 4px rgba(255,255,255,0.15),
-      0 0 6px rgba(160,40,40,0.35);
+      0 2px 4px rgba(0,0,0,0.95),
+      0 0 4px rgba(255,255,255,0.10),
+      0 0 6px rgba(120,30,30,0.35),
+      0 0 0 rgba(0,0,0,0);
   }
   100%{
     text-shadow:
       0 2px 6px rgba(0,0,0,1),
-      0 0 6px rgba(255,255,255,0.08),
-      0 0 14px rgba(180,40,40,0.8);
+      0 0 4px rgba(255,255,255,0.08),
+      0 0 14px rgba(185,40,40,0.9),
+      0 0 22px rgba(185,40,40,0.7);
   }
 }
 
@@ -164,47 +163,12 @@ body{
   margin:10px auto 30px auto;
 }
 
-/* WRAPPER CARDS + LINEE */
-.cardsWrapper{
-  position:relative;
-  margin-top:20px;
-}
-
-/* SVG linee che collegano le card */
-.cardLinks{
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  z-index:0;
-  display:none;
-}
-.cardLinks line{
-  stroke:#e7d8b3;
-  stroke-width:1.4;
-  stroke-opacity:0.2;
-  stroke-linecap:round;
-  animation:pulseLine 2.8s infinite alternate ease-in-out;
-}
-@keyframes pulseLine{
-  0%{
-    stroke-opacity:0.05;
-  }
-  100%{
-    stroke-opacity:0.45;
-  }
-}
-/* Mostra le linee solo su desktop, altrimenti su mobile si sballano le posizioni */
-@media(min-width:1000px){
-  .cardLinks{display:block;}
-}
-
 /* GRIGLIA CARDS */
 .cardsLayout{
-  position:relative;
-  z-index:1;
   display:grid;
   grid-template-columns:1.4fr 1fr 1fr 1fr;
   gap:16px;
+  margin-top:20px;
 }
 @media(max-width:1000px){
   .cardsLayout{grid-template-columns:1fr 1fr;}
@@ -316,65 +280,43 @@ tbody tr:hover{
 
 <div id="main">
 
-  <!-- WRAPPER CARDS + LINEE -->
-  <div class="cardsWrapper">
+  <!-- CARDS -->
+  <div class="cardsLayout">
 
-    <!-- SVG LINEE CHE COLLEGANO LE CARD (visibile solo desktop) -->
-    <svg class="cardLinks" viewBox="0 0 100 40" preserveAspectRatio="none">
-      <!-- Da card 1 a card 2 -->
-      <line x1="15" y1="20" x2="38" y2="20" />
-      <!-- Da card 2 a card 3 -->
-      <line x1="38" y1="20" x2="60" y2="20" />
-      <!-- Da card 3 a card 4 -->
-      <line x1="60" y1="20" x2="83" y2="20" />
-      <!-- Rama inferiore leggermente spezzata per effetto “pietra” -->
-      <line x1="20" y1="25" x2="40" y2="28" />
-      <line x1="40" y1="28" x2="63" y2="26" />
-      <line x1="63" y1="26" x2="80" y2="29" />
-      <!-- Diagonali leggere -->
-      <line x1="20" y1="20" x2="40" y2="26" />
-      <line x1="40" y1="20" x2="63" y2="26" />
-      <line x1="63" y1="20" x2="80" y2="26" />
-    </svg>
+    <!-- Sinistra: Total Burned + USD Burned -->
+    <div class="card">
+      <label>Total Burned</label>
+      <div class="value" id="burnTotal">—</div>
 
-    <!-- CARDS -->
-    <div class="cardsLayout">
-
-      <!-- Sinistra: Total Burned + USD Burned -->
-      <div class="card">
-        <label>Total Burned</label>
-        <div class="value" id="burnTotal">—</div>
-
-        <label style="margin-top:10px;">Total USD Burned</label>
-        <div class="value" id="burnUSD">—</div>
-      </div>
-
-      <!-- Burn Address -->
-      <div class="card">
-        <label>Burn Address</label>
-        <div class="value">
-          <a class="link" href="https://solscan.io/account/5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE" target="_blank">
-            5G62fW1B…SPUYE
-          </a>
-        </div>
-      </div>
-
-      <!-- Total Supply -->
-      <div class="card">
-        <label>Total Supply</label>
-        <div class="value" id="supply">—</div>
-      </div>
-
-      <!-- Price + Last Update -->
-      <div class="card">
-        <label>Nummus Price</label>
-        <div class="value" id="priceNummus">—</div>
-
-        <label style="margin-top:10px;">Last Update</label>
-        <div class="value" id="update">—</div>
-      </div>
-
+      <label style="margin-top:10px;">Total USD Burned</label>
+      <div class="value" id="burnUSD">—</div>
     </div>
+
+    <!-- Burn Address -->
+    <div class="card">
+      <label>Burn Address</label>
+      <div class="value">
+        <a class="link" href="https://solscan.io/account/5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE" target="_blank">
+          5G62fW1B…SPUYE
+        </a>
+      </div>
+    </div>
+
+    <!-- Total Supply -->
+    <div class="card">
+      <label>Total Supply</label>
+      <div class="value" id="supply">—</div>
+    </div>
+
+    <!-- Price + Last Update -->
+    <div class="card">
+      <label>Nummus Price</label>
+      <div class="value" id="priceNummus">—</div>
+
+      <label style="margin-top:10px;">Last Update</label>
+      <div class="value" id="update">—</div>
+    </div>
+
   </div>
 
   <!-- TABELLA -->
