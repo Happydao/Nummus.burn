@@ -6,7 +6,6 @@
 
 <title>NUMMUS BURN — Live</title>
 
-<!-- FONT ROMANO CINZEL -->
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&display=swap" rel="stylesheet">
 
 <style>
@@ -26,184 +25,193 @@
         height:100vh;
         object-fit:cover;
         z-index:-3;
-        filter:brightness(0.55) contrast(1.3);
+        opacity:0.9;
     }
 
-    /* OVERLAY */
     #overlay{
         position:fixed;
         top:0;left:0;
         width:100vw;height:100vh;
-        background:rgba(0,0,0,0.45);
+        background:rgba(0,0,0,0.55);
         z-index:-2;
     }
 
-    /* HEADER CARD */
+    /* CARD TITOLO */
     .titleCard{
         width:90%;
-        max-width:900px;
-        margin:25px auto 10px auto;
-        background:rgba(20,20,20,0.65);
-        border:2px solid rgba(200,160,90,0.7);
+        max-width:800px;
+        margin:20px auto;
+        background:rgba(20,20,20,0.55);
+        border:2px solid rgba(180,140,70,0.5);
         border-radius:18px;
-        padding:20px;
+        padding:22px 20px;
         text-align:center;
         position:relative;
-        backdrop-filter:blur(4px);
-        transition:0.2s;
-        box-shadow:0 0 18px rgba(0,0,0,0.7);
+        backdrop-filter:blur(5px);
+        box-shadow:0 0 20px rgba(0,0,0,0.6);
+        transition:0.25s;
     }
     .titleCard:hover{
-        border-color:#ff2a2a;
-        box-shadow:0 0 20px #ff0000;
+        border-color:rgba(140,20,20,0.8);
+        box-shadow:0 0 30px rgba(80,0,0,0.7);
     }
 
     .title{
-        font-size:36px;
+        font-size:32px;
         font-weight:800;
-        color:#f2e7c9;
+        color:#f0e6d0;
         letter-spacing:2px;
-        text-shadow:0 0 6px rgba(255,255,255,0.15);
+        text-shadow:0 2px 6px rgba(0,0,0,0.7);
     }
 
     /* LOGHI */
     .logo{
-        width:110px;
-        height:110px;
-        object-fit:contain;
         position:absolute;
-        top:50%;
-        transform:translateY(-50%);
-        filter:drop-shadow(0 0 6px #ff0000);
+        width:80px;height:80px;
+        top:50%;transform:translateY(-50%);
+        filter:drop-shadow(0 0 3px #ff0000);
         animation:glow 1.6s infinite alternate ease-in-out;
     }
 
+    #logoLeft{left:-70px;}
+    #logoRight{right:-70px;}
+
     @keyframes glow{
-        0%{filter:drop-shadow(0 0 6px #ff0000) brightness(1);}
-        100%{filter:drop-shadow(0 0 18px #ff3b00) brightness(1.15);}
+        0%{filter:drop-shadow(0 0 4px #550000);}
+        100%{filter:drop-shadow(0 0 12px #b30000);}
     }
 
-    #logoLeft{left:-130px;}
-    #logoRight{right:-130px;}
-
-    /* Per mobile: loghi più vicini e più piccoli */
-    @media(max-width:750px){
-        #logoLeft{
-            left:-90px;
-            width:80px;height:80px;
+    @media(max-width:700px){
+        #logoLeft, #logoRight{
+            width:55px;height:55px;
+            left:-50px;right:-50px;
         }
-        #logoRight{
-            right:-90px;
-            width:80px;height:80px;
-        }
-        .title{font-size:27px;}
-    }
-
-    /* GITHUB BADGE */
-    #githubBtn{
-        position:fixed;
-        top:15px;
-        right:15px;
-        background:rgba(30,30,30,0.7);
-        border:1px solid rgba(255,255,255,0.3);
-        padding:8px 12px;
-        border-radius:12px;
-        color:#fff;
-        text-decoration:none;
-        font-size:14px;
-        backdrop-filter:blur(3px);
-        transition:0.2s;
-        z-index:10;
-    }
-    #githubBtn:hover{
-        border-color:#ff2a2a;
-        color:#ff2a2a;
+        .title{font-size:24px;}
     }
 
     /* MAIN WRAPPER */
     #main{
-        width:92%;
+        width:90%;
         max-width:1200px;
-        margin:20px auto;
+        margin:15px auto;
     }
 
-    /* CARDS */
-    .cards{
-        display:grid;
-        grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-        gap:18px;
-        margin-top:20px;
-    }
-
-    .card{
-        background:rgba(15,15,15,0.6);
-        border-radius:14px;
-        padding:18px;
-        border:2px solid rgba(180,140,70,0.5);
+    /* GITHUB */
+    #githubBtn{
+        position:fixed;
+        top:15px;right:15px;
+        background:rgba(40,40,40,0.65);
+        border:1px solid rgba(255,255,255,0.25);
+        padding:8px 12px;
+        border-radius:10px;
+        text-decoration:none;
+        color:white;
+        font-size:14px;
         backdrop-filter:blur(4px);
-        box-shadow:0 0 14px rgba(0,0,0,0.6);
-        transition:0.2s;
+        transition:0.25s;
+        z-index:50;
+        text-shadow:0 2px 4px rgba(0,0,0,0.5);
     }
+    #githubBtn:hover{
+        color:#ff4444;
+        border-color:#ff4444;
+        box-shadow:0 0 12px rgba(100,0,0,0.6);
+    }
+
+    /* GRIGLIA CARDS */
+    .cardsLayout{
+        display:grid;
+        grid-template-columns:1.5fr 1fr 1fr 1fr;
+        gap:18px;
+        margin-top:25px;
+    }
+
+    @media(max-width:1000px){
+        .cardsLayout{
+            grid-template-columns:1fr 1fr;
+        }
+    }
+
+    @media(max-width:600px){
+        .cardsLayout{
+            grid-template-columns:1fr;
+        }
+    }
+
+    /* CARD BASE */
+    .card{
+        background:rgba(18,18,18,0.55);
+        border:2px solid rgba(180,140,70,0.45);
+        border-radius:14px;
+        padding:14px 16px;
+        backdrop-filter:blur(4px);
+        transition:0.25s;
+        box-shadow:0 0 14px rgba(0,0,0,0.6);
+    }
+
     .card:hover{
-        border-color:#ff2a2a;
-        box-shadow:0 0 20px #ff0000;
+        border-color:rgba(130,30,30,0.75);
+        box-shadow:0 0 20px rgba(80,0,0,0.7);
     }
 
     .card label{
         font-size:13px;
         color:#e5d7b2;
-        font-weight:600;
-    }
-    .value{
-        font-size:22px;
-        margin-top:6px;
-        font-weight:800;
-        color:#fff;
-        text-shadow:0 0 6px rgba(255,255,255,0.2);
+        text-shadow:0 2px 4px rgba(0,0,0,0.6);
     }
 
-    /* TABE*/
+    .value{
+        font-size:20px;
+        font-weight:800;
+        margin-top:4px;
+        color:#fff;
+        text-shadow:0 3px 5px rgba(0,0,0,0.8);
+    }
+
+    /* LINK BIANCO → ROSSO SCURO */
+    .link{
+        color:white;
+        text-decoration:none;
+        transition:0.25s;
+    }
+    .link:hover{
+        color:#b22626;
+    }
+
+    /* TABELLA */
     table{
         width:100%;
-        margin-top:30px;
+        margin-top:25px;
         border-collapse:collapse;
-        background:rgba(15,15,15,0.55);
-        border-radius:14px;
+        background:rgba(12,12,12,0.55);
+        border-radius:12px;
+        border:2px solid rgba(180,140,70,0.45);
         overflow:hidden;
-        border:2px solid rgba(180,140,70,0.5);
+        backdrop-filter:blur(4px);
         box-shadow:0 0 15px rgba(0,0,0,0.5);
-        backdrop-filter:blur(3px);
     }
 
-    table thead{
-        background:rgba(60,40,20,0.35);
+    thead{
+        background:rgba(60,40,20,0.4);
     }
 
     th{
         padding:12px;
-        text-align:left;
-        font-size:14px;
         color:#e5d7b2;
+        font-size:14px;
+        text-shadow:0 2px 4px rgba(0,0,0,0.6);
     }
 
     td{
-        padding:10px;
+        padding:12px;
         border-bottom:1px solid rgba(180,140,70,0.25);
-        font-size:15px;
         color:#fff;
+        font-size:15px;
+        text-shadow:0 2px 4px rgba(0,0,0,0.7);
     }
 
     tr:hover{
-        background:rgba(255,40,40,0.10);
-    }
-
-    .link{
-        color:#ff3b3b;
-        text-decoration:none;
-        font-weight:700;
-    }
-    .link:hover{
-        color:#fff;
+        background:rgba(90,0,0,0.25);
     }
 
 </style>
@@ -211,49 +219,34 @@
 
 <body>
 
-<!-- VIDEO SFONDO -->
 <video id="bgvid" autoplay muted loop playsinline>
-    <source src="/burn.mp4" type="video/mp4">
+    <source src="burn.mp4" type="video/mp4">
 </video>
 <div id="overlay"></div>
 
-<!-- GITHUB -->
 <a id="githubBtn" href="https://github.com/Happydao/Nummus.burn" target="_blank">GitHub</a>
 
-<!-- TITOLO IN CARD -->
 <div class="titleCard">
-    <img src="/nummus.png" id="logoLeft" class="logo">
-    <img src="/nummus.png" id="logoRight" class="logo">
+    <img src="nummus.png" class="logo" id="logoLeft">
+    <img src="nummus.png" class="logo" id="logoRight">
     <div class="title">NUMMUS — BURN LIVE</div>
 </div>
 
 <div id="main">
 
-    <!-- CARDS -->
-    <div class="cards">
+    <!-- NUOVA GRIGLIA CARDS -->
+    <div class="cardsLayout">
 
+        <!-- COLONNA SINISTRA (più larga) -->
         <div class="card">
             <label>Total Burned</label>
             <div class="value" id="burnTotal">—</div>
-        </div>
 
-        <div class="card">
-            <label>Total Burned USD</label>
+            <label style="margin-top:14px;">Total USD Burned</label>
             <div class="value" id="burnUSD">—</div>
         </div>
 
-        <div class="card">
-            <label>Total Supply</label>
-            <div class="value" id="supply">—</div>
-        </div>
-
-        <div class="card">
-            <label>Nummus Price</label>
-            <div class="value" id="priceNummus">—</div>
-            <label style="display:block;margin-top:12px;">Last Update</label>
-            <div class="value" id="update">—</div>
-        </div>
-
+        <!-- Burn Address -->
         <div class="card">
             <label>Burn Address</label>
             <div class="value">
@@ -263,6 +256,21 @@
             </div>
         </div>
 
+        <!-- Supply -->
+        <div class="card">
+            <label>Total Supply</label>
+            <div class="value" id="supply">—</div>
+        </div>
+
+        <!-- Price + Update -->
+        <div class="card">
+            <label>Nummus Price</label>
+            <div class="value" id="priceNummus">—</div>
+
+            <label style="margin-top:14px;">Last Update</label>
+            <div class="value" id="update">—</div>
+        </div>
+
     </div>
 
     <!-- TABELLA -->
@@ -270,7 +278,7 @@
         <thead>
             <tr>
                 <th>#</th>
-                <th>Amount Burned</th>
+                <th>Amount</th>
                 <th>Transaction</th>
             </tr>
         </thead>
@@ -282,13 +290,11 @@
 </div>
 
 <script>
-/* CARICAMENTO DATI */
 async function loadData(){
     try{
         const burn = await fetch("data/burn.json").then(r=>r.json());
         const price = await fetch("data/price.json").then(r=>r.json());
 
-        // CARDS
         document.getElementById("burnTotal").textContent =
             Number(burn.totalUi).toLocaleString();
 
@@ -304,7 +310,6 @@ async function loadData(){
         document.getElementById("update").textContent =
             price.updatedAt ? new Date(price.updatedAt).toLocaleString() : "—";
 
-        // TABELLA
         const tbody = document.getElementById("burnRows");
         tbody.innerHTML = "";
 
