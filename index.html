@@ -56,7 +56,7 @@ body{
   box-shadow:0 0 12px rgba(80,0,0,0.6);
 }
 
-/* HEADER A TRE BLOCCHI: LOGO - TITOLO - LOGO */
+/* HEADER: LOGO - TITOLO - LOGO */
 #headerBar{
   width:92%;
   max-width:1200px;
@@ -73,14 +73,14 @@ body{
   width:120px;
   height:120px;
   border-radius:50%;
-  border:2px solid rgba(230,210,160,0.8);
+  border:2px solid rgba(230,210,160,0.9);
   background:rgba(5,5,5,0.35);
   display:flex;
   align-items:center;
   justify-content:center;
   box-shadow:
     0 0 10px rgba(0,0,0,0.8),
-    0 0 16px rgba(180,140,70,0.6);
+    0 0 18px rgba(180,140,70,0.7);
   transition:0.25s;
 }
 .logoCard img{
@@ -93,38 +93,53 @@ body{
 .logoCard:hover{
   box-shadow:
     0 0 18px rgba(0,0,0,0.9),
-    0 0 28px rgba(120,20,20,0.9);
-  border-color:#a73737;
+    0 0 26px rgba(120,20,20,0.85);
 }
 @keyframes logoGlow{
   0%{filter:drop-shadow(0 0 4px #3b0000);}
   100%{filter:drop-shadow(0 0 14px #b03838);}
 }
 
-/* CARD TITOLO */
+/* CARD TITOLO: bordo rosso fisso */
 .titleCard{
   flex:1;
-  background:rgba(10,10,10,0.22); /* quasi trasparente */
-  border:2px solid rgba(180,140,70,0.7);
+  background:rgba(10,10,10,0.22);
+  border:2px solid rgba(135,35,35,0.9); /* rosso statico */
   border-radius:18px;
   padding:18px 10px;
   text-align:center;
   backdrop-filter:blur(4px);
-  box-shadow:0 0 18px rgba(0,0,0,0.8);
+  box-shadow:0 0 20px rgba(0,0,0,0.9);
   transition:0.25s;
 }
 .titleCard:hover{
-  border-color:rgba(135,35,35,0.85);
-  box-shadow:0 0 24px rgba(80,0,0,0.7);
+  box-shadow:0 0 28px rgba(80,0,0,0.85);
 }
+
+/* TITOLO CON BAGLIORE ROSSO PULSANTE */
 .title{
   font-size:32px;
   font-weight:800;
   color:#f1e5c6;
   letter-spacing:2px;
   text-shadow:
-    0 2px 4px rgba(0,0,0,0.85),
-    0 0 4px rgba(255,255,255,0.12);
+    0 2px 4px rgba(0,0,0,0.9),
+    0 0 4px rgba(255,255,255,0.15);
+  animation:titleGlow 2.1s infinite alternate ease-in-out;
+}
+@keyframes titleGlow{
+  0%{
+    text-shadow:
+      0 2px 4px rgba(0,0,0,0.9),
+      0 0 4px rgba(255,255,255,0.15),
+      0 0 6px rgba(160,40,40,0.35);
+  }
+  100%{
+    text-shadow:
+      0 2px 6px rgba(0,0,0,1),
+      0 0 6px rgba(255,255,255,0.08),
+      0 0 14px rgba(180,40,40,0.8);
+  }
 }
 
 /* MOBILE HEADER */
@@ -149,8 +164,44 @@ body{
   margin:10px auto 30px auto;
 }
 
-/* GRID CARDS: sinistra grande + 3 a destra */
+/* WRAPPER CARDS + LINEE */
+.cardsWrapper{
+  position:relative;
+  margin-top:20px;
+}
+
+/* SVG linee che collegano le card */
+.cardLinks{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  display:none;
+}
+.cardLinks line{
+  stroke:#e7d8b3;
+  stroke-width:1.4;
+  stroke-opacity:0.2;
+  stroke-linecap:round;
+  animation:pulseLine 2.8s infinite alternate ease-in-out;
+}
+@keyframes pulseLine{
+  0%{
+    stroke-opacity:0.05;
+  }
+  100%{
+    stroke-opacity:0.45;
+  }
+}
+/* Mostra le linee solo su desktop, altrimenti su mobile si sballano le posizioni */
+@media(min-width:1000px){
+  .cardLinks{display:block;}
+}
+
+/* GRIGLIA CARDS */
 .cardsLayout{
+  position:relative;
+  z-index:1;
   display:grid;
   grid-template-columns:1.4fr 1fr 1fr 1fr;
   gap:16px;
@@ -164,7 +215,7 @@ body{
 
 /* CARD BASE, QUASI TRASPARENTE */
 .card{
-  background:rgba(5,5,5,0.18); /* vedi lo sfondo sotto */
+  background:rgba(5,5,5,0.18);
   border:2px solid rgba(180,140,70,0.6);
   border-radius:14px;
   padding:12px 14px;
@@ -224,7 +275,6 @@ th{
   color:#e7d8b3;
   font-weight:600;
 }
-/* Allineamento coerente tra header e valori */
 th:nth-child(1), td:nth-child(1){text-align:left;}
 th:nth-child(2), td:nth-child(2){text-align:left;}
 th:nth-child(3), td:nth-child(3){text-align:right;}
@@ -266,43 +316,65 @@ tbody tr:hover{
 
 <div id="main">
 
-  <!-- CARDS -->
-  <div class="cardsLayout">
+  <!-- WRAPPER CARDS + LINEE -->
+  <div class="cardsWrapper">
 
-    <!-- Sinistra: Total Burned + USD Burned -->
-    <div class="card">
-      <label>Total Burned</label>
-      <div class="value" id="burnTotal">—</div>
+    <!-- SVG LINEE CHE COLLEGANO LE CARD (visibile solo desktop) -->
+    <svg class="cardLinks" viewBox="0 0 100 40" preserveAspectRatio="none">
+      <!-- Da card 1 a card 2 -->
+      <line x1="15" y1="20" x2="38" y2="20" />
+      <!-- Da card 2 a card 3 -->
+      <line x1="38" y1="20" x2="60" y2="20" />
+      <!-- Da card 3 a card 4 -->
+      <line x1="60" y1="20" x2="83" y2="20" />
+      <!-- Rama inferiore leggermente spezzata per effetto “pietra” -->
+      <line x1="20" y1="25" x2="40" y2="28" />
+      <line x1="40" y1="28" x2="63" y2="26" />
+      <line x1="63" y1="26" x2="80" y2="29" />
+      <!-- Diagonali leggere -->
+      <line x1="20" y1="20" x2="40" y2="26" />
+      <line x1="40" y1="20" x2="63" y2="26" />
+      <line x1="63" y1="20" x2="80" y2="26" />
+    </svg>
 
-      <label style="margin-top:10px;">Total USD Burned</label>
-      <div class="value" id="burnUSD">—</div>
-    </div>
+    <!-- CARDS -->
+    <div class="cardsLayout">
 
-    <!-- Burn Address -->
-    <div class="card">
-      <label>Burn Address</label>
-      <div class="value">
-        <a class="link" href="https://solscan.io/account/5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE" target="_blank">
-          5G62fW1B…SPUYE
-        </a>
+      <!-- Sinistra: Total Burned + USD Burned -->
+      <div class="card">
+        <label>Total Burned</label>
+        <div class="value" id="burnTotal">—</div>
+
+        <label style="margin-top:10px;">Total USD Burned</label>
+        <div class="value" id="burnUSD">—</div>
       </div>
+
+      <!-- Burn Address -->
+      <div class="card">
+        <label>Burn Address</label>
+        <div class="value">
+          <a class="link" href="https://solscan.io/account/5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE" target="_blank">
+            5G62fW1B…SPUYE
+          </a>
+        </div>
+      </div>
+
+      <!-- Total Supply -->
+      <div class="card">
+        <label>Total Supply</label>
+        <div class="value" id="supply">—</div>
+      </div>
+
+      <!-- Price + Last Update -->
+      <div class="card">
+        <label>Nummus Price</label>
+        <div class="value" id="priceNummus">—</div>
+
+        <label style="margin-top:10px;">Last Update</label>
+        <div class="value" id="update">—</div>
+      </div>
+
     </div>
-
-    <!-- Total Supply -->
-    <div class="card">
-      <label>Total Supply</label>
-      <div class="value" id="supply">—</div>
-    </div>
-
-    <!-- Price + Last Update -->
-    <div class="card">
-      <label>Nummus Price</label>
-      <div class="value" id="priceNummus">—</div>
-
-      <label style="margin-top:10px;">Last Update</label>
-      <div class="value" id="update">—</div>
-    </div>
-
   </div>
 
   <!-- TABELLA -->
