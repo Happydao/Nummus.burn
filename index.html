@@ -7,7 +7,6 @@
   <meta name="description" content="Live burn dashboard on Solana: totals, USD value, supply, last update and recent burn transactions for NUMMUS." />
   <link rel="preload" as="image" href="bg-desktop.png">
   <link rel="preload" as="image" href="bg-thumb.webp">
-  <link rel="preload" as="image" href="nummus.burn.png">
   <style>
     :root{
       --glass-bg: rgba(2,5,15,0.78);
@@ -43,7 +42,6 @@
     // ---- Config ----
     const BG_SRC      = 'bg-desktop.png';
     const THUMB_SRC   = 'bg-thumb.webp';
-    const ART_SRC     = 'nummus.burn.png';
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
@@ -52,7 +50,7 @@
     const DRAW_UI_ONLY_WHEN_READY = true;
 
     // Layout
-    let CONTAINER_TOP_Y_PCT = 0.22;
+    let CONTAINER_TOP_Y_PCT = 0.18;
     let BOTTOM_INFO_Y       = 0.94;
 
     let BG_FOCUS_X = 0.5, BG_FOCUS_Y = 0.32;
@@ -111,11 +109,6 @@
 
     // Assets
     let thumbBitmap = null, mainBitmap  = null;
-    let artImg = new Image(), artReady = false;
-
-    artImg.onload = ()=>{ artReady = true; };
-    artImg.onerror = ()=>{ console.warn('Failed to load art image'); };
-    artImg.src = ART_SRC;
 
     async function loadBitmap(src){
       try {
@@ -135,8 +128,8 @@
     })();
 
     // Data
-    let burn = null;  // { totalUi, burns, count, updatedAt? }
-    let price = null; // { priceUsd, burnTotalUsd, totalSupplyTokensNum, updatedAt? }
+    let burn = null;
+    let price = null;
 
     let linkHitboxes = [];
 
@@ -171,18 +164,6 @@
       ctx.closePath();
     }
 
-    function drawGlass(x, y, w, h){
-      roundRectPath(x, y, w, h, px(14));
-      ctx.fillStyle = COLOR.glass;
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = COLOR.stroke;
-      ctx.stroke();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = COLOR.stroke2;
-      ctx.stroke();
-    }
-
     function drawPanel(x, y, w, h){
       roundRectPath(x, y, w, h, px(18));
       ctx.fillStyle = 'rgba(4,8,24,0.92)';
@@ -197,12 +178,24 @@
       ctx.strokeStyle = 'rgba(255,95,210,0.25)';
       ctx.stroke();
 
-      // top glow
       const g = ctx.createLinearGradient(x, y, x, y+px(60));
       g.addColorStop(0, 'rgba(255,255,255,0.12)');
       g.addColorStop(1, 'rgba(255,255,255,0.00)');
       ctx.fillStyle = g;
       ctx.fillRect(x+px(2), y+px(2), w-px(4), px(58));
+    }
+
+    // Tabella più trasparente
+    function drawSoftPanel(x, y, w, h){
+      roundRectPath(x, y, w, h, px(16));
+      ctx.fillStyle = 'rgba(5,10,26,0.55)';          // più trasparente
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(120,255,178,0.18)';
+      ctx.stroke();
     }
 
     function text(opts){
@@ -313,19 +306,23 @@
         ctx.fillRect(0,0,w,h);
       }
 
-      // overlay dark + vignette
       const v = ctx.createRadialGradient(w*0.5,h*0.3,0,w*0.5,h*0.5,Math.max(w,h)*0.8);
       v.addColorStop(0,'rgba(0,0,0,0.20)');
-      v.addColorStop(1,'rgba(0,0,0,0.65)');
+      v.addColorStop(1,'rgba(0,0,0,0.70)');
       ctx.fillStyle = v;
       ctx.fillRect(0,0,w,h);
+    }
 
-      // scanlines
-      const scan = ctx.createLinearGradient(0,0,0,h);
-      scan.addColorStop(0,'rgba(255,255,255,0.03)');
-      scan.addColorStop(1,'rgba(255,255,255,0.00)');
-      ctx.fillStyle = scan;
-      ctx.fillRect(0,0,w,h);
+    function drawStatCard(x, y, w, h, gradientColors, borderColor){
+      roundRectPath(x, y, w, h, px(16));
+      const g = ctx.createLinearGradient(x, y, x, y+h);
+      g.addColorStop(0, gradientColors[0]);
+      g.addColorStop(1, gradientColors[1]);
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = borderColor;
+      ctx.stroke();
     }
 
     function drawUI(){
@@ -344,7 +341,6 @@
       const padX        = px(14);
       const padY        = px(10);
       const vGap        = px(6);
-      const colGap      = px(10);
 
       const totalTokens = burn?.totalUi ? Number(burn.totalUi) : 0;
       const pxUsd       = price?.priceUsd ? Number(price.priceUsd) : 0;
@@ -357,7 +353,6 @@
       const maxRows = w < 520 ? 8 : (w < 900 ? 10 : 16);
       const rows    = rowsAll.slice(0, maxRows);
 
-      // Pannello principale
       const panelW = Math.min(Math.max(px(560), Math.floor(w*0.9)), px(1160));
       const rowH   = px(24);
       const headH  = px(32);
@@ -365,10 +360,9 @@
 
       const tableRowsH = headH + Math.max(1, rows.length) * rowH + tPad*2 + px(6);
 
-      const statsBlockH = px(110);     // spazio per cards + hero text
-      const artBlockH   = px(120);     // altezza zona immagine centrale
+      const statsBlockH = px(100);
 
-      const panelH = tPad + statsBlockH + artBlockH + tPad + tableRowsH + tPad;
+      const panelH = tPad + statsBlockH + tPad + tableRowsH + tPad;
 
       const panelX = Math.floor((w - panelW)/2);
       let panelY   = Math.floor(h * CONTAINER_TOP_Y_PCT);
@@ -377,11 +371,10 @@
 
       drawPanel(panelX, panelY, panelW, panelH);
 
-      // === Header: titolo + GitHub pill ===
+      // Header
       const headerX = panelX + px(18);
       const headerY = panelY + px(16);
 
-      // Titolo
       text({
         str: 'NUMMUS BURN',
         x: headerX,
@@ -401,7 +394,7 @@
         baseline: 'top'
       });
 
-      // GitHub pill in alto a destra
+      // GitHub pill
       (function gh(){
         const label='GitHub';
         const padXb=px(10), padYb=px(6);
@@ -410,7 +403,16 @@
         const bw=Math.ceil(tw+padXb*2), bh=Math.ceil(px(28));
         const bx=Math.floor(panelX + panelW - bw - px(16));
         const by=Math.floor(panelY + px(14));
-        drawGlass(bx,by,bw,bh);
+        roundRectPath(bx,by,bw,bh,px(999));
+        const g = ctx.createLinearGradient(bx,by,bx,by+bh);
+        g.addColorStop(0,'rgba(255,255,255,0.20)');
+        g.addColorStop(1,'rgba(255,255,255,0.05)');
+        ctx.fillStyle = g;
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+        ctx.stroke();
+
         text({
           str:label,
           x:bx+Math.floor(bw/2),
@@ -424,15 +426,19 @@
         linkHitboxes.push({x:bx,y:by,w:bw,h:bh,url:GITHUB_REPO_URL});
       })();
 
-      // === STAT CARDS (sotto il titolo) ===
+      // STAT CARDS
       const statsTopY = headerY + px(48);
-      const colW      = (panelW - px(18)*2 - px(10)*2) / 3;
-      const cardH     = px(70);
+      const colGap    = px(10);
+      const colW      = (panelW - px(18)*2 - colGap*2) / 3;
+      const cardH     = px(72);
 
-      // Card 1: total burned NUMMUS
       const card1X = panelX + px(18);
       const card1Y = statsTopY;
-      drawGlass(card1X, card1Y, colW, cardH);
+      drawStatCard(
+        card1X, card1Y, colW, cardH,
+        ['rgba(40,255,180,0.18)','rgba(0,0,0,0.4)'],
+        'rgba(120,255,178,0.85)'
+      );
       text({
         str: 'Total burned',
         x: card1X + padX,
@@ -452,10 +458,13 @@
         baseline: 'top'
       });
 
-      // Card 2: total USD burned
-      const card2X = card1X + colW + px(10);
+      const card2X = card1X + colW + colGap;
       const card2Y = statsTopY;
-      drawGlass(card2X, card2Y, colW, cardH);
+      drawStatCard(
+        card2X, card2Y, colW, cardH,
+        ['rgba(255,95,210,0.18)','rgba(0,0,0,0.4)'],
+        'rgba(255,95,210,0.85)'
+      );
       text({
         str: 'Total USD burned',
         x: card2X + padX,
@@ -475,10 +484,13 @@
         baseline: 'top'
       });
 
-      // Card 3: total supply + burn address short
-      const card3X = card2X + colW + px(10);
+      const card3X = card2X + colW + colGap;
       const card3Y = statsTopY;
-      drawGlass(card3X, card3Y, colW, cardH);
+      drawStatCard(
+        card3X, card3Y, colW, cardH,
+        ['rgba(255,179,71,0.18)','rgba(0,0,0,0.45)'],
+        'rgba(255,179,71,0.9)'
+      );
       text({
         str: 'Total supply',
         x: card3X + padX,
@@ -498,14 +510,19 @@
         baseline: 'top'
       });
 
-      // burn address pill sotto la terza card
+      // burn address pill
       const burnStr = shorten(BURN_ADDRESS);
       ctx.font = `700 ${px(11)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
       const bw = ctx.measureText(burnStr).width + px(26);
       const bh = px(22);
       const bx = card3X + colW - bw - px(6);
       const by = card3Y + cardH - bh - px(4);
-      drawGlass(bx,by,bw,bh);
+      roundRectPath(bx,by,bw,bh,px(999));
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.stroke();
       text({
         str: burnStr,
         x: bx + bw/2,
@@ -520,51 +537,13 @@
         linkHitboxes.push({ x: bx, y: by, w: bw, h: bh, url: BURN_SOLSCAN_URL });
       }
 
-      // === ART centrale (legionari che bruciano la moneta) ===
-      const artZoneY = statsTopY + cardH + px(16);
-      const artZoneH = px(120);
-      const artCenterX = panelX + panelW/2;
-      const artCenterY = artZoneY + artZoneH/2;
-
-      if (artReady){
-        const maxArtW = Math.min(panelW*0.3, px(360));
-        const ratio   = artImg.naturalWidth / artImg.naturalHeight;
-        const artW    = maxArtW;
-        const artH    = artW / ratio;
-
-        // glow
-        const glowR = Math.max(artW, artH);
-        const gGlow = ctx.createRadialGradient(artCenterX, artCenterY, 0, artCenterX, artCenterY, glowR);
-        gGlow.addColorStop(0,'rgba(255,179,71,0.40)');
-        gGlow.addColorStop(1,'rgba(255,179,71,0.00)');
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        ctx.fillStyle = gGlow;
-        ctx.beginPath();
-        ctx.arc(artCenterX, artCenterY, glowR, 0, Math.PI*2);
-        ctx.fill();
-        ctx.restore();
-
-        // immagine
-        const artX = artCenterX - artW/2;
-        const artY = artCenterY - artH/2;
-        ctx.drawImage(artImg, artX, artY, artW, artH);
-
-        // contorno sottile
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(artX, artY, artW, artH);
-        ctx.restore();
-      }
-
-      // === TABELLONE Recent burns ===
+      // TABELLONE più trasparente
       const tableX       = panelX + px(18);
-      const tableY       = artZoneY + artZoneH + px(18);
+      const tableY       = statsTopY + cardH + px(18);
       const tableInnerW  = panelW - px(18)*2;
       const tableH       = tableRowsH;
 
-      drawPanel(tableX, tableY, tableInnerW, tableH);
+      drawSoftPanel(tableX, tableY, tableInnerW, tableH);
 
       const headerBarH = px(34);
       const hbGrad = ctx.createLinearGradient(tableX, tableY, tableX, tableY + headerBarH);
@@ -645,7 +624,6 @@
           const url = row.url || '#';
           const ts  = row.timestamp || '';
 
-          // background alternato
           if (i % 2 === 0){
             ctx.fillStyle = 'rgba(255,255,255,0.04)';
             ctx.fillRect(tableX+px(8), ry - px(10), tableInnerW-px(16), rowH);
@@ -709,7 +687,12 @@
 
       const upX = panelX;
       const upY = bottomY - Math.floor(badgeH/2);
-      drawGlass(upX, upY, upW, badgeH);
+      roundRectPath(upX, upY, upW, badgeH, px(999));
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.stroke();
       text({
         str: updatedStr,
         x: upX + px(12),
@@ -722,7 +705,12 @@
 
       const prX = panelX + panelW - prW;
       const prY = upY;
-      drawGlass(prX, prY, prW, badgeH);
+      roundRectPath(prX, prY, prW, badgeH, px(999));
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.stroke();
       text({
         str: priceLabel,
         x: prX + prW - px(12),
@@ -781,7 +769,7 @@
 
     (async function start(){
       await refreshData();
-      setInterval(refreshData, 5*60*1000); // ogni 5 minuti
+      setInterval(refreshData, 5*60*1000);
       lastTime = performance.now();
       initEmbers();
       requestAnimationFrame(loop);
