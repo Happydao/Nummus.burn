@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NUMMUS BURN — Live Dashboard</title>
   <meta name="description" content="Live burn dashboard on Solana: totals, USD value, supply, last update and recent burn transactions for NUMMUS." />
+  <!-- user image usata ora come copertina interna, non come sfondo -->
   <link rel="preload" as="image" href="bg-desktop.png">
-  <link rel="preload" as="image" href="bg-thumb.webp">
   <style>
     :root{
-      /* Palette più professionale, fredda */
-      --glass-bg: rgba(5, 10, 26, 0.78);
-      --glass-border: rgba(255,255,255,0.28);
-      --glass-accent: rgba(90, 180, 255, 0.22);
+      /* Palette più professionale, scura/fredda, con accenti fuoco */
+      --glass-bg: rgba(8, 10, 24, 0.78);
+      --glass-border: rgba(255,255,255,0.26);
+      --glass-accent: rgba(120, 190, 255, 0.22);
       --text: #f5f7ff;
       --muted: #a5b0d0;
-      --accent: #5dd6ff;   /* azzurro */
-      --accent2: #9b8cff;  /* viola */
+      --accent: #5dd6ff;
+      --accent2: #9b8cff;
       --link: #7fd0ff;
-      --burn: #ff9e5a;     /* rimane caldo per il fuoco */
+      --burn: #ff9e5a;
     }
     *{ box-sizing: border-box; }
     html, body {
@@ -41,20 +41,15 @@
 
   <script>
     // ---- Config ----
-    const BG_SRC      = 'bg-desktop.png';
-    const THUMB_SRC   = 'bg-thumb.webp';
+    const COVER_SRC   = 'bg-desktop.png';   // usata solo come copertina interna
 
     const BURN_JSON   = 'data/burn.json';
     const PRICE_JSON  = 'data/price.json';
-    const FIT_MODE    = 'cover';
 
     const DRAW_UI_ONLY_WHEN_READY = true;
 
     // Layout
     let CONTAINER_TOP_Y_PCT = 0.18;
-    let BOTTOM_INFO_Y       = 0.94; // ora non usato, ma lo lasciamo se vuoi riaggiungere badge in futuro
-
-    let BG_FOCUS_X = 0.5, BG_FOCUS_Y = 0.32;
 
     const GITHUB_REPO_URL   = 'https://github.com/Happydao/Nummus.burn';
     const BURN_ADDRESS      = '5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE';
@@ -65,9 +60,9 @@
     const COLOR = {
       text:   getComputedStyle(document.documentElement).getPropertyValue('--text').trim()        || '#f5f7ff',
       muted:  getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()      || '#a5b0d0',
-      glass:  getComputedStyle(document.documentElement).getPropertyValue('--glass-bg').trim()   || 'rgba(5,10,26,0.78)',
-      stroke: getComputedStyle(document.documentElement).getPropertyValue('--glass-border').trim() || 'rgba(255,255,255,0.28)',
-      stroke2:getComputedStyle(document.documentElement).getPropertyValue('--glass-accent').trim() || 'rgba(90,180,255,0.22)',
+      glass:  getComputedStyle(document.documentElement).getPropertyValue('--glass-bg').trim()   || 'rgba(8,10,24,0.78)',
+      stroke: getComputedStyle(document.documentElement).getPropertyValue('--glass-border').trim() || 'rgba(255,255,255,0.26)',
+      stroke2:getComputedStyle(document.documentElement).getPropertyValue('--glass-accent').trim() || 'rgba(120,190,255,0.22)',
       accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()     || '#5dd6ff',
       accent2:getComputedStyle(document.documentElement).getPropertyValue('--accent2').trim()    || '#9b8cff',
       link:   getComputedStyle(document.documentElement).getPropertyValue('--link').trim()       || '#7fd0ff',
@@ -99,17 +94,16 @@
     }
     const px = (n)=> Math.round(n * scaleUnit());
 
-    // URL tweaks
+    // URL tweaks (ti lascio il tableY se vuoi alzare/abbassare il pannello da querystring)
     (function tweaks(){
       try{
         const qs = new URLSearchParams(location.search);
         const ty = Number(qs.get('tableY')); if (!Number.isNaN(ty)) CONTAINER_TOP_Y_PCT = ty/100;
-        const fy = Number(qs.get('focusY')); if (!Number.isNaN(fy)) BG_FOCUS_Y = Math.min(1, Math.max(0, fy));
       }catch{}
     })();
 
     // Assets
-    let thumbBitmap = null, mainBitmap  = null;
+    let coverBitmap = null;
 
     async function loadBitmap(src){
       try {
@@ -123,9 +117,8 @@
       }
     }
 
-    (async function initBackground(){
-      thumbBitmap = await loadBitmap(THUMB_SRC);
-      mainBitmap  = await loadBitmap(BG_SRC);
+    (async function initCover(){
+      coverBitmap = await loadBitmap(COVER_SRC);
     })();
 
     // Data
@@ -166,23 +159,15 @@
     }
 
     function drawPanel(x, y, w, h){
-      // Pannello più trasparente per far vedere il fuoco dietro
-      roundRectPath(x, y, w, h, px(18));
+      roundRectPath(x, y, w, h, px(22));
       ctx.fillStyle = COLOR.glass;
       ctx.fill();
-      ctx.lineWidth = 1.6;
+      ctx.lineWidth = 1.8;
       ctx.strokeStyle = COLOR.stroke;
       ctx.stroke();
       ctx.lineWidth = 1;
       ctx.strokeStyle = COLOR.stroke2;
       ctx.stroke();
-
-      // highlight morbido in alto
-      const g = ctx.createLinearGradient(x, y, x, y+px(60));
-      g.addColorStop(0, 'rgba(255,255,255,0.09)');
-      g.addColorStop(1, 'rgba(255,255,255,0.00)');
-      ctx.fillStyle = g;
-      ctx.fillRect(x+px(2), y+px(2), w-px(4), px(58));
     }
 
     function text(opts){
@@ -228,8 +213,8 @@
       return (addr && addr.length>14) ? addr.slice(0,8)+'…'+addr.slice(-6) : (addr||'—');
     }
 
-    // Animated embers
-    const MAX_EMBERS = 40;
+    // Animated embers (lapilli)
+    const MAX_EMBERS = 55;
     let embers = [];
     function initEmbers(){
       embers = [];
@@ -239,9 +224,9 @@
         embers.push({
           x: Math.random()*w,
           y: h*Math.random(),
-          vy: - (0.15 + Math.random()*0.25),
-          size: 1 + Math.random()*2,
-          alpha: 0.3 + Math.random()*0.5
+          vy: - (0.20 + Math.random()*0.3),
+          size: 1 + Math.random()*2.5,
+          alpha: 0.35 + Math.random()*0.45
         });
       }
     }
@@ -251,13 +236,13 @@
       const h = canvas.clientHeight || 900;
       for (const p of embers){
         p.y += p.vy * dt * 60;
-        p.x += (Math.sin((p.y+p.x)*0.01))*0.05*dt*60;
-        if (p.y < -10){
-          p.y = h + Math.random()*40;
+        p.x += (Math.sin((p.y+p.x)*0.01))*0.07*dt*60;
+        if (p.y < -15){
+          p.y = h + Math.random()*60;
           p.x = Math.random()*w;
-          p.vy = - (0.15 + Math.random()*0.25);
-          p.size = 1 + Math.random()*2;
-          p.alpha = 0.3 + Math.random()*0.5;
+          p.vy = - (0.20 + Math.random()*0.3);
+          p.size = 1 + Math.random()*2.5;
+          p.alpha = 0.35 + Math.random()*0.45;
         }
       }
     }
@@ -267,8 +252,8 @@
       ctx.globalCompositeOperation = 'screen';
       for (const p of embers){
         const grd = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size*3);
-        grd.addColorStop(0,`rgba(255,180,120,${p.alpha})`);
-        grd.addColorStop(1,'rgba(255,180,120,0)');
+        grd.addColorStop(0,`rgba(255,200,140,${p.alpha})`);
+        grd.addColorStop(1,'rgba(255,200,140,0)');
         ctx.fillStyle = grd;
         ctx.beginPath();
         ctx.arc(p.x,p.y,p.size*3,0,Math.PI*2);
@@ -277,27 +262,25 @@
       ctx.restore();
     }
 
+    // SFONDO: solo effetto fuoco, niente immagine
     function drawBackground(w, h){
-      const bmp = mainBitmap || thumbBitmap;
-      if (bmp){
-        const imgW = bmp.width, imgH = bmp.height;
-        const scale = (FIT_MODE==='cover') ? Math.max(w/imgW, h/imgH) : Math.min(w/imgW, h/imgH);
-        const sw = Math.min(imgW, Math.round(w/scale));
-        const sh = Math.min(imgH, Math.round(h/scale));
-        const cx = Math.round(BG_FOCUS_X*imgW), cy = Math.round(BG_FOCUS_Y*imgH);
-        const sx = Math.max(0, Math.min(imgW - sw, cx - Math.round(sw/2)));
-        const sy = Math.max(0, Math.min(imgH - sh, cy - Math.round(sh/2)));
-        ctx.drawImage(bmp, sx, sy, sw, sh, 0, 0, w, h);
-      } else {
-        ctx.fillStyle = '#050712';
-        ctx.fillRect(0,0,w,h);
-      }
+      const g = ctx.createLinearGradient(0, h, 0, 0);
+      g.addColorStop(0.00, '#3b1300');
+      g.addColorStop(0.20, '#b13b00');
+      g.addColorStop(0.45, '#ff7a2f');
+      g.addColorStop(0.70, '#261027');
+      g.addColorStop(1.00, '#050712');
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,w,h);
 
-      // Vignettatura un po' più leggera per far vedere meglio il fondo
-      const v = ctx.createRadialGradient(w*0.5,h*0.3,0,w*0.5,h*0.5,Math.max(w,h)*0.8);
-      v.addColorStop(0,'rgba(0,0,0,0.15)');
-      v.addColorStop(1,'rgba(0,0,0,0.60)');
-      ctx.fillStyle = v;
+      // glow alla base del fuoco
+      const r = ctx.createRadialGradient(
+        w*0.5, h*0.95, 0,
+        w*0.5, h, Math.max(w,h)*0.5
+      );
+      r.addColorStop(0,'rgba(255,200,150,0.65)');
+      r.addColorStop(1,'rgba(255,200,150,0)');
+      ctx.fillStyle = r;
       ctx.fillRect(0,0,w,h);
     }
 
@@ -308,7 +291,7 @@
       g.addColorStop(1, gradientColors[1]);
       ctx.fillStyle = g;
       ctx.fill();
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.4;
       ctx.strokeStyle = borderColor;
       ctx.stroke();
     }
@@ -326,8 +309,8 @@
       const labelWeight = 700;
       const valueSize   = px(22);
       const valueWeight = 800;
-      const padX        = px(14);
-      const padY        = px(10);
+      const padSide     = px(18);
+      const padY        = px(16);
       const vGap        = px(6);
 
       const totalTokens = burn?.totalUi ? Number(burn.totalUi) : 0;
@@ -338,21 +321,31 @@
                             : (price && price.totalSupplyTokens ? Number(price.totalSupplyTokens) : 0);
 
       const rowsAll = (burn?.burns || []);
-      const maxRows = w < 520 ? 8 : (w < 900 ? 10 : 16);
+      const maxRows = w < 520 ? 8 : (w < 900 ? 10 : 14);
       const rows    = rowsAll.slice(0, maxRows);
 
-      const panelW = Math.min(Math.max(px(560), Math.floor(w*0.9)), px(1160));
-      const rowH   = px(24);
-      const headH  = px(32);
-      const tPad   = px(12);
+      const rowH        = px(24);
+      const tableHeadH  = px(28);
+      const tablePad    = px(10);
+      const tableBlockH = tableHeadH + tablePad*2 + Math.max(1, rows.length)*rowH + px(4);
 
-      const tableRowsH = headH + Math.max(1, rows.length) * rowH + tPad*2 + px(6);
+      const coverH      = px(110);
+      const titleBlockH = px(50);
+      const cardH       = px(82);
 
-      const cardH      = px(72);
-      const cardGapY   = px(10);
-      const cardsBlockH = cardH * 2 + cardGapY; // tre card sopra + una card (wallet) sotto
+      const panelW = Math.min(Math.max(px(640), Math.floor(w*0.9)), px(1180));
+      const cardsGapTop = px(12);
+      const afterCardsGap = px(16);
 
-      const panelH = tPad + cardsBlockH + tPad + tableRowsH + tPad;
+      const panelH =
+        padY +               // top padding
+        coverH + px(12) +    // cover + spazio
+        titleBlockH +
+        cardsGapTop +
+        cardH +              // una riga con 4 card
+        afterCardsGap +
+        tableBlockH +
+        padY;                // bottom padding
 
       const panelX = Math.floor((w - panelW)/2);
       let panelY   = Math.floor(h * CONTAINER_TOP_Y_PCT);
@@ -361,14 +354,40 @@
 
       drawPanel(panelX, panelY, panelW, panelH);
 
-      // Header
-      const headerX = panelX + px(18);
-      const headerY = panelY + px(16);
+      let cursorY = panelY + padY;
 
+      // COVER SCHIACCIATA
+      const coverX = panelX + padSide;
+      const coverW = panelW - padSide*2;
+      const coverY = cursorY;
+      if (coverBitmap){
+        const imgW = coverBitmap.width;
+        const imgH = coverBitmap.height;
+        const scale = coverW / imgW;
+        const drawH = Math.min(coverH, imgH * scale);
+        roundRectPath(coverX, coverY, coverW, drawH, px(18));
+        ctx.save();
+        ctx.clip();
+        ctx.drawImage(coverBitmap, 0, (imgH - drawH/scale)/2, imgW, drawH/scale, coverX, coverY, coverW, drawH);
+        ctx.restore();
+      } else {
+        // fallback: fascia sfumata
+        roundRectPath(coverX, coverY, coverW, coverH, px(18));
+        const cg = ctx.createLinearGradient(coverX, coverY, coverX, coverY+coverH);
+        cg.addColorStop(0,'rgba(255,180,120,0.18)');
+        cg.addColorStop(1,'rgba(20,10,30,0.8)');
+        ctx.fillStyle = cg;
+        ctx.fill();
+      }
+
+      cursorY += coverH + px(12);
+
+      // HEADER TESTO
+      const headerX = coverX;
       text({
         str: 'NUMMUS BURN',
         x: headerX,
-        y: headerY,
+        y: cursorY,
         size: px(20),
         weight: 800,
         color: '#ffffff',
@@ -377,30 +396,30 @@
       text({
         str: 'Live Solana burn activity from the dedicated NUMMUS burn wallet',
         x: headerX,
-        y: headerY + px(22),
+        y: cursorY + px(22),
         size: px(12),
         weight: 500,
         color: COLOR.muted,
         baseline: 'top'
       });
 
-      // GitHub pill
+      // GitHub pill in alto a destra
       (function gh(){
         const label='GitHub';
         const padXb=px(10), padYb=px(6);
         ctx.font=`700 ${px(12)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
         const tw=ctx.measureText(label).width;
         const bw=Math.ceil(tw+padXb*2), bh=Math.ceil(px(28));
-        const bx=Math.floor(panelX + panelW - bw - px(16));
-        const by=Math.floor(panelY + px(14));
+        const bx=Math.floor(panelX + panelW - bw - padSide);
+        const by=Math.floor(cursorY + px(2));
         roundRectPath(bx,by,bw,bh,px(999));
         const g = ctx.createLinearGradient(bx,by,bx,by+bh);
-        g.addColorStop(0,'rgba(255,255,255,0.16)');
+        g.addColorStop(0,'rgba(255,255,255,0.14)');
         g.addColorStop(1,'rgba(255,255,255,0.05)');
         ctx.fillStyle = g;
         ctx.fill();
         ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(255,255,255,0.40)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
         ctx.stroke();
 
         text({
@@ -416,23 +435,29 @@
         linkHitboxes.push({x:bx,y:by,w:bw,h:bh,url:GITHUB_REPO_URL});
       })();
 
-      // STAT CARDS
-      const statsTopY = headerY + px(48);
-      const colGap    = px(10);
-      const colW      = (panelW - px(18)*2 - colGap*2) / 3;
+      cursorY += titleBlockH + cardsGapTop;
 
-      // Card 1: TotalBarnet
-      const card1X = panelX + px(18);
-      const card1Y = statsTopY;
+      // STAT CARDS: 4 card uguali in una riga
+      const cardsX = panelX + padSide;
+      const colGap = px(8);
+      const colW   = (panelW - padSide*2 - colGap*3) / 4;
+
+      const padInX = px(10);
+      const padInY = px(10);
+
+      const cardY = cursorY;
+
+      // 1) Total Barnet
+      const c1x = cardsX;
       drawStatCard(
-        card1X, card1Y, colW, cardH,
+        c1x, cardY, colW, cardH,
         ['rgba(93,214,255,0.18)','rgba(3,10,30,0.7)'],
         'rgba(93,214,255,0.85)'
       );
       text({
         str: 'Total Barnet',
-        x: card1X + padX,
-        y: card1Y + padY,
+        x: c1x + padInX,
+        y: cardY + padInY,
         size: labelSize,
         weight: labelWeight,
         color: COLOR.muted,
@@ -440,26 +465,25 @@
       });
       text({
         str: `${fitNumber(totalTokens, 6)} NUMMUS`,
-        x: card1X + padX,
-        y: card1Y + padY + labelSize + vGap,
+        x: c1x + padInX,
+        y: cardY + padInY + labelSize + vGap,
         size: valueSize,
         weight: valueWeight,
         color: COLOR.accent,
         baseline: 'top'
       });
 
-      // Card 2: TotalUSDBarnet
-      const card2X = card1X + colW + colGap;
-      const card2Y = statsTopY;
+      // 2) Total USD Barnet
+      const c2x = c1x + colW + colGap;
       drawStatCard(
-        card2X, card2Y, colW, cardH,
+        c2x, cardY, colW, cardH,
         ['rgba(155,140,255,0.20)','rgba(3,8,28,0.7)'],
         'rgba(155,140,255,0.85)'
       );
       text({
         str: 'Total USD Barnet',
-        x: card2X + padX,
-        y: card2Y + padY,
+        x: c2x + padInX,
+        y: cardY + padInY,
         size: labelSize,
         weight: labelWeight,
         color: COLOR.muted,
@@ -467,26 +491,25 @@
       });
       text({
         str: money(totalUsd),
-        x: card2X + padX,
-        y: card2Y + padY + labelSize + vGap,
+        x: c2x + padInX,
+        y: cardY + padInY + labelSize + vGap,
         size: valueSize,
         weight: valueWeight,
         color: COLOR.accent2,
         baseline: 'top'
       });
 
-      // Card 3: TotalSupply
-      const card3X = card2X + colW + colGap;
-      const card3Y = statsTopY;
+      // 3) Total Supply
+      const c3x = c2x + colW + colGap;
       drawStatCard(
-        card3X, card3Y, colW, cardH,
+        c3x, cardY, colW, cardH,
         ['rgba(80,95,140,0.30)','rgba(3,6,20,0.7)'],
         'rgba(200,210,255,0.80)'
       );
       text({
         str: 'Total Supply',
-        x: card3X + padX,
-        y: card3Y + padY,
+        x: c3x + padInX,
+        y: cardY + padInY,
         size: labelSize,
         weight: labelWeight,
         color: COLOR.muted,
@@ -494,24 +517,21 @@
       });
       text({
         str: formatSupplyCompact(supplyNum),
-        x: card3X + padX,
-        y: card3Y + padY + labelSize + vGap,
+        x: c3x + padInX,
+        y: cardY + padInY + labelSize + vGap,
         size: valueSize,
         weight: valueWeight,
         color: COLOR.text,
         baseline: 'top'
       });
 
-      // Card 4: Wallet + NumMousePrice + LastUpdate
-      const card4X = panelX + px(18);
-      const card4Y = statsTopY + cardH + cardGapY;
-      const card4W = panelW - px(18)*2;
+      // 4) Wallet
+      const c4x = c3x + colW + colGap;
       drawStatCard(
-        card4X, card4Y, card4W, cardH,
+        c4x, cardY, colW, cardH,
         ['rgba(10,20,45,0.85)','rgba(5,10,30,0.75)'],
         'rgba(125,190,255,0.85)'
       );
-
       const updated     = price?.updatedAt || burn?.updatedAt || null;
       const updatedStr  = updated ? new Date(updated).toLocaleString() : '—';
       const priceStr    = pxUsd
@@ -520,58 +540,75 @@
 
       text({
         str: 'Wallet',
-        x: card4X + padX,
-        y: card4Y + padY,
+        x: c4x + padInX,
+        y: cardY + padInY,
         size: labelSize,
         weight: labelWeight,
         color: COLOR.muted,
         baseline: 'top'
       });
 
-      // Indirizzo del wallet
-      const walletY = card4Y + padY + labelSize + vGap;
+      // Address
+      const walletTop = cardY + padInY + labelSize + vGap;
       text({
         str: shorten(BURN_ADDRESS),
-        x: card4X + padX,
-        y: walletY,
-        size: valueSize,
-        weight: valueWeight,
+        x: c4x + padInX,
+        y: walletTop,
+        size: px(14),
+        weight: 700,
         color: COLOR.link,
         baseline: 'top'
       });
 
-      // NumMousePrice
-      const infoY = walletY + valueSize + px(4);
+      // Nummus price
       text({
-        str: `NumMouse price: ${priceStr} USD`,
-        x: card4X + padX,
-        y: infoY,
-        size: px(12),
+        str: `Nummus price`,
+        x: c4x + padInX,
+        y: walletTop + px(20),
+        size: px(11),
         weight: 500,
         color: COLOR.muted,
+        baseline: 'top'
+      });
+      text({
+        str: `${priceStr} USD`,
+        x: c4x + padInX,
+        y: walletTop + px(32),
+        size: px(13),
+        weight: 700,
+        color: COLOR.text,
         baseline: 'top'
       });
 
       // Last update
       text({
-        str: `Last update: ${updatedStr}`,
-        x: card4X + padX,
-        y: infoY + px(16),
-        size: px(11),
+        str: `Last update`,
+        x: c4x + padInX,
+        y: walletTop + px(50),
+        size: px(10),
+        weight: 500,
+        color: COLOR.muted,
+        baseline: 'top'
+      });
+      text({
+        str: updatedStr,
+        x: c4x + padInX,
+        y: walletTop + px(62),
+        size: px(10),
         weight: 400,
         color: COLOR.muted,
         baseline: 'top'
       });
 
-      // Link Solscan dentro la card Wallet (solo il testo è cliccabile, non tutta la card)
+      // Link Solscan dentro la card (solo il testo è cliccabile)
       if (BURN_SOLSCAN_URL){
         const linkStr = 'Open on Solscan';
         ctx.font = `700 ${px(11)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif`;
         ctx.fillStyle = COLOR.link;
         ctx.textAlign = 'right';
         ctx.textBaseline = 'alphabetic';
-        const lx = card4X + card4W - padX;
-        const ly = card4Y + cardH - padY;
+        const lx = c4x + colW - padInX;
+        const ly = cardY + cardH - px(10);
         ctx.fillText(linkStr, lx, ly);
         const m = ctx.measureText(linkStr);
         linkHitboxes.push({
@@ -583,32 +620,29 @@
         });
       }
 
-      // TABELLONE TRANSAZIONI — una sola tabella, integrata, più trasparente
-      const tableX       = panelX + px(18);
-      const tableY       = statsTopY + cardsBlockH + px(18);
-      const tableInnerW  = panelW - px(18)*2;
-      const tableH       = tableRowsH;
+      cursorY = cardY + cardH + afterCardsGap;
 
-      // Leggera fascia di header sopra la tabella, senza secondo bordo
-      const headerBarH = px(34);
+      // TABELLA (una sola, ben contenuta)
+      const tableX      = panelX + padSide;
+      const tableY      = cursorY;
+      const tableInnerW = panelW - padSide*2;
+
+      // sfondo delicato per tutta la tabella
+      roundRectPath(tableX, tableY, tableInnerW, tableBlockH, px(16));
+      ctx.fillStyle = 'rgba(5,10,26,0.55)';
+      ctx.fill();
+
+      const headerBarH = tableHeadH;
       const hbGrad = ctx.createLinearGradient(tableX, tableY, tableX, tableY + headerBarH);
-      hbGrad.addColorStop(0, 'rgba(255,255,255,0.07)');
+      hbGrad.addColorStop(0, 'rgba(255,255,255,0.09)');
       hbGrad.addColorStop(1, 'rgba(255,255,255,0.00)');
       ctx.fillStyle = hbGrad;
       ctx.fillRect(tableX, tableY, tableInnerW, headerBarH);
 
-      // Divider sottile tra cards e tabella
-      ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(tableX, tableY);
-      ctx.lineTo(tableX + tableInnerW, tableY);
-      ctx.stroke();
-
       text({
         str: 'Recent burns',
         x: tableX + px(12),
-        y: tableY + px(9),
+        y: tableY + px(7),
         size: px(13),
         color: COLOR.muted,
         weight: 800,
@@ -617,8 +651,8 @@
 
       const headersY = tableY + headerBarH + px(4);
       const colIndexW = px(32);
-      const colQtyW   = Math.max(px(150), Math.floor(tableInnerW*0.32));
-      const colTsW    = Math.max(px(120), Math.floor(tableInnerW*0.20));
+      const colQtyW   = Math.max(px(150), Math.floor(tableInnerW*0.30));
+      const colTsW    = Math.max(px(140), Math.floor(tableInnerW*0.28));
 
       text({
         str: '#',
@@ -677,7 +711,6 @@
           const url = row.url || '#';
           const ts  = row.timestamp || '';
 
-          // Riga alternata con overlay molto leggero (più trasparente)
           if (i % 2 === 0){
             ctx.fillStyle = 'rgba(0,0,0,0.25)';
             ctx.fillRect(tableX+px(8), ry - px(10), tableInnerW-px(16), rowH);
@@ -726,8 +759,6 @@
           });
         }
       }
-
-      // NIENTE badge in basso: più spazio libero per vedere bene il fuoco e i lapilli
     }
 
     // Interactivity
@@ -763,9 +794,9 @@
       updateEmbers(dt);
 
       ctx.clearRect(0,0,w,h);
-      drawBackground(w,h);
-      drawEmbers();
-      drawUI();
+      drawBackground(w,h);   // solo fuoco
+      drawEmbers();          // lapilli
+      drawUI();              // pannello con copertina, card, tabella
 
       requestAnimationFrame(loop);
     }
