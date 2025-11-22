@@ -9,323 +9,355 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&display=swap" rel="stylesheet">
 
 <style>
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{
-        font-family:'Cinzel', serif;
-        color:#fff;
-        background:black;
-        overflow-x:hidden;
-    }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'Cinzel', serif;
+  color:#fff;
+  background:#000;
+  overflow-x:hidden;
+}
 
-    /* VIDEO SFONDO */
-    #bgvid{
-        position:fixed;
-        top:0;left:0;
-        width:100vw;
-        height:100vh;
-        object-fit:cover;
-        z-index:-3;
-        opacity:0.9;
-    }
+/* VIDEO SFONDO */
+#bgvid{
+  position:fixed;
+  top:0;left:0;
+  width:100vw;
+  height:100vh;
+  object-fit:cover;
+  z-index:-3;
+}
+#overlay{
+  position:fixed;
+  top:0;left:0;
+  width:100vw;height:100vh;
+  background:rgba(0,0,0,0.65);
+  z-index:-2;
+}
 
-    #overlay{
-        position:fixed;
-        top:0;left:0;
-        width:100vw;height:100vh;
-        background:rgba(0,0,0,0.55);
-        z-index:-2;
-    }
+/* GITHUB */
+#githubBtn{
+  position:fixed;
+  top:15px;right:15px;
+  background:rgba(25,25,25,0.7);
+  border:1px solid rgba(230,210,160,0.5);
+  padding:7px 12px;
+  border-radius:10px;
+  text-decoration:none;
+  color:#fff;
+  font-size:14px;
+  backdrop-filter:blur(4px);
+  transition:0.25s;
+  z-index:50;
+  text-shadow:0 2px 4px rgba(0,0,0,0.6);
+}
+#githubBtn:hover{
+  color:#a73737;
+  border-color:#a73737;
+  box-shadow:0 0 12px rgba(80,0,0,0.6);
+}
 
-    /* CARD TITOLO */
-    .titleCard{
-        width:90%;
-        max-width:800px;
-        margin:20px auto;
-        background:rgba(20,20,20,0.55);
-        border:2px solid rgba(180,140,70,0.5);
-        border-radius:18px;
-        padding:22px 20px;
-        text-align:center;
-        position:relative;
-        backdrop-filter:blur(5px);
-        box-shadow:0 0 20px rgba(0,0,0,0.6);
-        transition:0.25s;
-    }
-    .titleCard:hover{
-        border-color:rgba(140,20,20,0.8);
-        box-shadow:0 0 30px rgba(80,0,0,0.7);
-    }
+/* HEADER A TRE BLOCCHI: LOGO - TITOLO - LOGO */
+#headerBar{
+  width:92%;
+  max-width:1200px;
+  margin:25px auto 10px auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+}
 
-    .title{
-        font-size:32px;
-        font-weight:800;
-        color:#f0e6d0;
-        letter-spacing:2px;
-        text-shadow:0 2px 6px rgba(0,0,0,0.7);
-    }
+/* CARD LOGO CIRCOLARE */
+.logoCard{
+  flex:0 0 auto;
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  border:2px solid rgba(230,210,160,0.8);
+  background:rgba(5,5,5,0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:
+    0 0 10px rgba(0,0,0,0.8),
+    0 0 16px rgba(180,140,70,0.6);
+  transition:0.25s;
+}
+.logoCard img{
+  width:80%;
+  height:80%;
+  object-fit:contain;
+  filter:drop-shadow(0 0 4px #550000);
+  animation:logoGlow 1.8s infinite alternate ease-in-out;
+}
+.logoCard:hover{
+  box-shadow:
+    0 0 18px rgba(0,0,0,0.9),
+    0 0 28px rgba(120,20,20,0.9);
+  border-color:#a73737;
+}
+@keyframes logoGlow{
+  0%{filter:drop-shadow(0 0 4px #3b0000);}
+  100%{filter:drop-shadow(0 0 14px #b03838);}
+}
 
-    /* LOGHI */
-    .logo{
-        position:absolute;
-        width:80px;height:80px;
-        top:50%;transform:translateY(-50%);
-        filter:drop-shadow(0 0 3px #ff0000);
-        animation:glow 1.6s infinite alternate ease-in-out;
-    }
+/* CARD TITOLO */
+.titleCard{
+  flex:1;
+  background:rgba(10,10,10,0.22); /* quasi trasparente */
+  border:2px solid rgba(180,140,70,0.7);
+  border-radius:18px;
+  padding:18px 10px;
+  text-align:center;
+  backdrop-filter:blur(4px);
+  box-shadow:0 0 18px rgba(0,0,0,0.8);
+  transition:0.25s;
+}
+.titleCard:hover{
+  border-color:rgba(135,35,35,0.85);
+  box-shadow:0 0 24px rgba(80,0,0,0.7);
+}
+.title{
+  font-size:32px;
+  font-weight:800;
+  color:#f1e5c6;
+  letter-spacing:2px;
+  text-shadow:
+    0 2px 4px rgba(0,0,0,0.85),
+    0 0 4px rgba(255,255,255,0.12);
+}
 
-    #logoLeft{left:-70px;}
-    #logoRight{right:-70px;}
+/* MOBILE HEADER */
+@media(max-width:800px){
+  #headerBar{
+    flex-direction:column;
+    align-items:center;
+  }
+  .logoCard{
+    width:96px;
+    height:96px;
+  }
+  .title{
+    font-size:24px;
+  }
+}
 
-    @keyframes glow{
-        0%{filter:drop-shadow(0 0 4px #550000);}
-        100%{filter:drop-shadow(0 0 12px #b30000);}
-    }
+/* MAIN WRAPPER */
+#main{
+  width:92%;
+  max-width:1200px;
+  margin:10px auto 30px auto;
+}
 
-    @media(max-width:700px){
-        #logoLeft, #logoRight{
-            width:55px;height:55px;
-            left:-50px;right:-50px;
-        }
-        .title{font-size:24px;}
-    }
+/* GRID CARDS: sinistra grande + 3 a destra */
+.cardsLayout{
+  display:grid;
+  grid-template-columns:1.4fr 1fr 1fr 1fr;
+  gap:16px;
+}
+@media(max-width:1000px){
+  .cardsLayout{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:600px){
+  .cardsLayout{grid-template-columns:1fr;}
+}
 
-    /* MAIN WRAPPER */
-    #main{
-        width:90%;
-        max-width:1200px;
-        margin:15px auto;
-    }
+/* CARD BASE, QUASI TRASPARENTE */
+.card{
+  background:rgba(5,5,5,0.18); /* vedi lo sfondo sotto */
+  border:2px solid rgba(180,140,70,0.6);
+  border-radius:14px;
+  padding:12px 14px;
+  backdrop-filter:blur(2px);
+  transition:0.25s;
+  box-shadow:0 0 14px rgba(0,0,0,0.7);
+}
+.card:hover{
+  border-color:rgba(125,32,32,0.85);
+  box-shadow:0 0 20px rgba(80,0,0,0.75);
+}
+.card label{
+  font-size:13px;
+  color:#e7d8b3;
+  text-shadow:0 2px 3px rgba(0,0,0,0.8);
+}
+.value{
+  font-size:20px;
+  font-weight:800;
+  margin-top:4px;
+  color:#ffffff;
+  text-shadow:0 3px 5px rgba(0,0,0,0.9);
+}
 
-    /* GITHUB */
-    #githubBtn{
-        position:fixed;
-        top:15px;right:15px;
-        background:rgba(40,40,40,0.65);
-        border:1px solid rgba(255,255,255,0.25);
-        padding:8px 12px;
-        border-radius:10px;
-        text-decoration:none;
-        color:white;
-        font-size:14px;
-        backdrop-filter:blur(4px);
-        transition:0.25s;
-        z-index:50;
-        text-shadow:0 2px 4px rgba(0,0,0,0.5);
-    }
-    #githubBtn:hover{
-        color:#ff4444;
-        border-color:#ff4444;
-        box-shadow:0 0 12px rgba(100,0,0,0.6);
-    }
+/* LINK: bianco -> rosso scuro */
+.link{
+  color:#ffffff;
+  text-decoration:none;
+  transition:0.25s;
+  text-shadow:0 2px 4px rgba(0,0,0,0.9);
+}
+.link:hover{
+  color:#a73737;
+}
 
-    /* GRIGLIA CARDS */
-    .cardsLayout{
-        display:grid;
-        grid-template-columns:1.5fr 1fr 1fr 1fr;
-        gap:18px;
-        margin-top:25px;
-    }
+/* TABELLA */
+table{
+  width:100%;
+  margin-top:26px;
+  border-collapse:collapse;
+  background:rgba(5,5,5,0.22);
+  border-radius:14px;
+  border:2px solid rgba(180,140,70,0.6);
+  overflow:hidden;
+  backdrop-filter:blur(3px);
+  box-shadow:0 0 18px rgba(0,0,0,0.8);
+}
+thead{
+  background:rgba(50,35,20,0.5);
+}
+th,td{
+  padding:11px 14px;
+  text-shadow:0 2px 3px rgba(0,0,0,0.9);
+}
+th{
+  font-size:14px;
+  color:#e7d8b3;
+  font-weight:600;
+}
+/* Allineamento coerente tra header e valori */
+th:nth-child(1), td:nth-child(1){text-align:left;}
+th:nth-child(2), td:nth-child(2){text-align:left;}
+th:nth-child(3), td:nth-child(3){text-align:right;}
 
-    @media(max-width:1000px){
-        .cardsLayout{
-            grid-template-columns:1fr 1fr;
-        }
-    }
-
-    @media(max-width:600px){
-        .cardsLayout{
-            grid-template-columns:1fr;
-        }
-    }
-
-    /* CARD BASE */
-    .card{
-        background:rgba(18,18,18,0.55);
-        border:2px solid rgba(180,140,70,0.45);
-        border-radius:14px;
-        padding:14px 16px;
-        backdrop-filter:blur(4px);
-        transition:0.25s;
-        box-shadow:0 0 14px rgba(0,0,0,0.6);
-    }
-
-    .card:hover{
-        border-color:rgba(130,30,30,0.75);
-        box-shadow:0 0 20px rgba(80,0,0,0.7);
-    }
-
-    .card label{
-        font-size:13px;
-        color:#e5d7b2;
-        text-shadow:0 2px 4px rgba(0,0,0,0.6);
-    }
-
-    .value{
-        font-size:20px;
-        font-weight:800;
-        margin-top:4px;
-        color:#fff;
-        text-shadow:0 3px 5px rgba(0,0,0,0.8);
-    }
-
-    /* LINK BIANCO → ROSSO SCURO */
-    .link{
-        color:white;
-        text-decoration:none;
-        transition:0.25s;
-    }
-    .link:hover{
-        color:#b22626;
-    }
-
-    /* TABELLA */
-    table{
-        width:100%;
-        margin-top:25px;
-        border-collapse:collapse;
-        background:rgba(12,12,12,0.55);
-        border-radius:12px;
-        border:2px solid rgba(180,140,70,0.45);
-        overflow:hidden;
-        backdrop-filter:blur(4px);
-        box-shadow:0 0 15px rgba(0,0,0,0.5);
-    }
-
-    thead{
-        background:rgba(60,40,20,0.4);
-    }
-
-    th{
-        padding:12px;
-        color:#e5d7b2;
-        font-size:14px;
-        text-shadow:0 2px 4px rgba(0,0,0,0.6);
-    }
-
-    td{
-        padding:12px;
-        border-bottom:1px solid rgba(180,140,70,0.25);
-        color:#fff;
-        font-size:15px;
-        text-shadow:0 2px 4px rgba(0,0,0,0.7);
-    }
-
-    tr:hover{
-        background:rgba(90,0,0,0.25);
-    }
-
+td{
+  font-size:15px;
+  color:#ffffff;
+  border-bottom:1px solid rgba(180,140,70,0.25);
+}
+tbody tr:hover{
+  background:rgba(90,15,15,0.3);
+}
 </style>
 </head>
 
 <body>
 
 <video id="bgvid" autoplay muted loop playsinline>
-    <source src="burn.mp4" type="video/mp4">
+  <source src="burn.mp4" type="video/mp4">
 </video>
 <div id="overlay"></div>
 
 <a id="githubBtn" href="https://github.com/Happydao/Nummus.burn" target="_blank">GitHub</a>
 
-<div class="titleCard">
-    <img src="nummus.png" class="logo" id="logoLeft">
-    <img src="nummus.png" class="logo" id="logoRight">
+<!-- HEADER: LOGO - TITOLO - LOGO -->
+<div id="headerBar">
+  <div class="logoCard">
+    <img src="nummus.png" alt="Nummus logo">
+  </div>
+
+  <div class="titleCard">
     <div class="title">NUMMUS — BURN LIVE</div>
+  </div>
+
+  <div class="logoCard">
+    <img src="nummus.png" alt="Nummus logo">
+  </div>
 </div>
 
 <div id="main">
 
-    <!-- NUOVA GRIGLIA CARDS -->
-    <div class="cardsLayout">
+  <!-- CARDS -->
+  <div class="cardsLayout">
 
-        <!-- COLONNA SINISTRA (più larga) -->
-        <div class="card">
-            <label>Total Burned</label>
-            <div class="value" id="burnTotal">—</div>
+    <!-- Sinistra: Total Burned + USD Burned -->
+    <div class="card">
+      <label>Total Burned</label>
+      <div class="value" id="burnTotal">—</div>
 
-            <label style="margin-top:14px;">Total USD Burned</label>
-            <div class="value" id="burnUSD">—</div>
-        </div>
-
-        <!-- Burn Address -->
-        <div class="card">
-            <label>Burn Address</label>
-            <div class="value">
-                <a class="link" href="https://solscan.io/account/5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE" target="_blank">
-                    5G62fW1B…SPUYE
-                </a>
-            </div>
-        </div>
-
-        <!-- Supply -->
-        <div class="card">
-            <label>Total Supply</label>
-            <div class="value" id="supply">—</div>
-        </div>
-
-        <!-- Price + Update -->
-        <div class="card">
-            <label>Nummus Price</label>
-            <div class="value" id="priceNummus">—</div>
-
-            <label style="margin-top:14px;">Last Update</label>
-            <div class="value" id="update">—</div>
-        </div>
-
+      <label style="margin-top:10px;">Total USD Burned</label>
+      <div class="value" id="burnUSD">—</div>
     </div>
 
-    <!-- TABELLA -->
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Amount</th>
-                <th>Transaction</th>
-            </tr>
-        </thead>
-        <tbody id="burnRows">
-            <tr><td colspan="3" style="padding:20px;text-align:center;">Loading…</td></tr>
-        </tbody>
-    </table>
+    <!-- Burn Address -->
+    <div class="card">
+      <label>Burn Address</label>
+      <div class="value">
+        <a class="link" href="https://solscan.io/account/5G62fW1BuK6k9B6sGwvTBtoKRPseshj9SSYPzudSPUYE" target="_blank">
+          5G62fW1B…SPUYE
+        </a>
+      </div>
+    </div>
+
+    <!-- Total Supply -->
+    <div class="card">
+      <label>Total Supply</label>
+      <div class="value" id="supply">—</div>
+    </div>
+
+    <!-- Price + Last Update -->
+    <div class="card">
+      <label>Nummus Price</label>
+      <div class="value" id="priceNummus">—</div>
+
+      <label style="margin-top:10px;">Last Update</label>
+      <div class="value" id="update">—</div>
+    </div>
+
+  </div>
+
+  <!-- TABELLA -->
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Amount</th>
+        <th>Transaction</th>
+      </tr>
+    </thead>
+    <tbody id="burnRows">
+      <tr><td colspan="3" style="padding:20px;text-align:center;">Loading…</td></tr>
+    </tbody>
+  </table>
 
 </div>
 
 <script>
 async function loadData(){
-    try{
-        const burn = await fetch("data/burn.json").then(r=>r.json());
-        const price = await fetch("data/price.json").then(r=>r.json());
+  try{
+    const burn = await fetch("data/burn.json").then(r=>r.json());
+    const price = await fetch("data/price.json").then(r=>r.json());
 
-        document.getElementById("burnTotal").textContent =
-            Number(burn.totalUi).toLocaleString();
+    document.getElementById("burnTotal").textContent =
+      Number(burn.totalUi).toLocaleString();
 
-        document.getElementById("burnUSD").textContent =
-            Number(price.burnTotalUsd).toLocaleString("en-US",{style:"currency",currency:"USD"});
+    document.getElementById("burnUSD").textContent =
+      Number(price.burnTotalUsd).toLocaleString("en-US",{style:"currency",currency:"USD"});
 
-        document.getElementById("supply").textContent =
-            Number(price.totalSupplyTokensNum).toLocaleString();
+    document.getElementById("supply").textContent =
+      Number(price.totalSupplyTokensNum).toLocaleString();
 
-        document.getElementById("priceNummus").textContent =
-            Number(price.priceUsd).toFixed(6)+" USD";
+    document.getElementById("priceNummus").textContent =
+      Number(price.priceUsd).toFixed(6)+" USD";
 
-        document.getElementById("update").textContent =
-            price.updatedAt ? new Date(price.updatedAt).toLocaleString() : "—";
+    document.getElementById("update").textContent =
+      price.updatedAt ? new Date(price.updatedAt).toLocaleString() : "—";
 
-        const tbody = document.getElementById("burnRows");
-        tbody.innerHTML = "";
+    const tbody = document.getElementById("burnRows");
+    tbody.innerHTML = "";
 
-        burn.burns.forEach((b,i)=>{
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${i+1}</td>
-                <td>${Number(b.amountUi).toLocaleString()}</td>
-                <td><a class="link" href="${b.url}" target="_blank">Solscan</a></td>
-            `;
-            tbody.appendChild(tr);
-        });
+    burn.burns.forEach((b,i)=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${Number(b.amountUi).toLocaleString()}</td>
+        <td><a class="link" href="${b.url}" target="_blank">Solscan</a></td>
+      `;
+      tbody.appendChild(tr);
+    });
 
-    }catch(e){
-        console.error(e);
-    }
+  }catch(e){
+    console.error(e);
+  }
 }
 
 loadData();
