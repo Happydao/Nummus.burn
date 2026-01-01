@@ -1,6 +1,6 @@
 {
-  "count": 12,
-  "totalUi": "868439.360735",
+  "count": 10,
+  "totalUi": "752867.413463",
   "burns": [
     {
       "amountUi": "21955.063931",
@@ -41,14 +41,6 @@
     {
       "amountUi": "25388.186115",
       "url": "https://solscan.io/tx/2exnJt2wDbDbyY9cuVfeiHDnwXcvZuwvcySKqEVv2tZbNZeueBMHznHjqidSxQwkJGpR74zk8xrr4pheE9pw1QW1"
-    },
-    {
-      "amountUi": "56868.137617",
-      "url": "https://solscan.io/tx/29qPVUJVEBrikbKA6Lj2dY6PefVLRe4csS2b9tDr8hYqfAyazshY4xwhEqUFvTY1V14RLU2YUcxjqdSnqU6orc8Q"
-    },
-    {
-      "amountUi": "58703.809655",
-      "url": "https://solscan.io/tx/7fFfyJae2xPxb2cwp5sKevTL1sUMCM6ANQBjEr57TonXqa9KxhEpnTGt9c1sAAU8bnBnawmMiHpRTg1wDBkYegs"
     }
   ]
 }
