@@ -34,26 +34,36 @@ body{
   z-index:-2;
 }
 
-/* GITHUB */
-#githubBtn{
+/* TOP LINK CARD */
+.topLinkCard{
   position:fixed;
   top:15px;right:15px;
   background:rgba(25,25,25,0.7);
   border:1px solid rgba(230,210,160,0.5);
-  padding:7px 12px;
-  border-radius:10px;
+  padding:5px 9px;
+  border-radius:8px;
   text-decoration:none;
   color:#fff;
-  font-size:14px;
+  font-size:12px;
   backdrop-filter:blur(4px);
   transition:0.25s;
   z-index:50;
   text-shadow:0 2px 4px rgba(0,0,0,0.6);
 }
-#githubBtn:hover{
+.topLinkCard:hover{
   color:#a73737;
   border-color:#a73737;
   box-shadow:0 0 12px rgba(80,0,0,0.6);
+}
+@media(max-width:800px){
+  .topLinkCard{
+    position:static;
+    display:block;
+    width:max-content;
+    margin:10px auto 0 auto;
+    padding:4px 7px;
+    font-size:11px;
+  }
 }
 
 /* HEADER: LOGO - TITOLO - LOGO */
@@ -144,18 +154,23 @@ body{
 /* MOBILE HEADER */
 @media(max-width:800px){
   #headerBar{
-    flex-direction:column;
-    align-items:center;
+    flex-wrap:wrap;
+    justify-content:space-between;
   }
   .logoCard{
     width:96px;
     height:96px;
   }
+  .logoCard:first-child{order:0;}
+  .logoCard:last-child{order:1;}
+  .titleCard{
+    order:2;
+    flex:1 1 100%;
+  }
   .title{
-    font-size:24px;
+    font-size:20px;
   }
 }
-
 /* MAIN WRAPPER */
 #main{
   width:92%;
@@ -251,6 +266,26 @@ td{
 tbody tr:hover{
   background:rgba(90,15,15,0.3);
 }
+
+/* FOOTER */
+footer{
+  width:100%;
+  text-align:center;
+  margin:24px 0 32px 0;
+  color:#e7d8b3;
+  font-size:12px;
+  text-shadow:0 2px 3px rgba(0,0,0,0.85);
+}
+.footer-link{
+  color:#2f7bdc;
+  text-decoration:underline;
+}
+@media(max-width:800px){
+  footer{
+    font-size:8px;
+    white-space:nowrap;
+  }
+}
 </style>
 </head>
 
@@ -261,7 +296,7 @@ tbody tr:hover{
 </video>
 <div id="overlay"></div>
 
-<a id="githubBtn" href="https://github.com/Happydao/Nummus.burn" target="_blank">GitHub</a>
+<a class="topLinkCard" href="https://nummus.meme" target="_blank" rel="noopener">Nummus.meme</a>
 
 <!-- HEADER: LOGO - TITOLO - LOGO -->
 <div id="headerBar">
@@ -377,6 +412,10 @@ async function loadData(){
 loadData();
 setInterval(loadData, 60000);
 </script>
+
+<footer>
+  © 2026 Torrino DAO — Crafted with passion by HAPPY — <a class="footer-link" href="https://happydev.fi" target="_blank" rel="noopener">happydev.fi</a>
+</footer>
 
 </body>
 </html>
