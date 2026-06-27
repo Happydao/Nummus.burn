@@ -317,6 +317,11 @@ tbody tr:hover{
   white-space:nowrap;
   text-shadow:0 3px 5px rgba(0,0,0,0.9);
 }
+.reductionPercentage{
+  margin-left:9px;
+  color:#d45a5a;
+  font-size:14px;
+}
 .rangeSelector{
   display:grid;
   grid-template-columns:repeat(5, minmax(42px, 1fr));
@@ -367,6 +372,12 @@ tbody tr:hover{
   stroke-linecap:round;
   stroke-linejoin:round;
   filter:drop-shadow(0 0 4px rgba(182,59,59,0.7));
+}
+.supplyMarker{
+  fill:#1b0909;
+  stroke:#d9bd79;
+  stroke-width:2.2;
+  filter:drop-shadow(0 0 3px rgba(182,59,59,0.85));
 }
 .chartCrosshair{
   display:none;
@@ -574,7 +585,8 @@ const CHART = {
   top: 24,
   bottom: 48,
   minSupply: 90000000,
-  maxSupply: 100000000
+  maxSupply: 100000000,
+  initialSupply: 100000000
 };
 
 const numberFormatter = new Intl.NumberFormat("en-US", {maximumFractionDigits: 2});
@@ -587,8 +599,14 @@ async function loadData(){
       fetch(`data/price.json?t=${cacheBuster}`).then(r=>r.json())
     ]);
 
-    document.getElementById("burnTotal").textContent =
-      Number(burn.totalUi).toLocaleString();
+    const totalBurned = Number(burn.totalUi);
+    const burnTotal = document.getElementById("burnTotal");
+    burnTotal.textContent = totalBurned.toLocaleString();
+    const burnedPercentage = document.createElement("span");
+    burnedPercentage.className = "reductionPercentage";
+    burnedPercentage.textContent = `${((totalBurned/CHART.initialSupply)*100).toFixed(2)}%`;
+    burnedPercentage.title = "Percentage burned from the initial 100,000,000 NUMMUS supply";
+    burnTotal.appendChild(burnedPercentage);
 
     document.getElementById("burnUSD").textContent =
       Number(price.burnTotalUsd).toLocaleString("en-US",{style:"currency",currency:"USD"});
@@ -729,13 +747,23 @@ function renderSupplyChart(){
     <line class="chartAxis" x1="${CHART.left}" y1="${CHART.top}" x2="${CHART.left}" y2="${CHART.height-CHART.bottom}" />
     <path class="supplyArea" d="${areaPath}" />
     <path class="supplyLine" d="${linePath}" />
+    ${chartState.points.map(point=>
+      `<circle class="supplyMarker" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="4" />`
+    ).join("")}
     <line class="chartCrosshair" id="chartCrosshair" y1="${CHART.top}" y2="${CHART.height-CHART.bottom}" />
     <circle class="chartHoverDot" id="chartHoverDot" r="5" />
     <rect class="chartCapture" x="${CHART.left}" y="${CHART.top}" width="${plotWidth}" height="${plotHeight}" />
   `;
 
   const latest = history.at(-1);
-  document.getElementById("chartSupplyValue").textContent = `${numberFormatter.format(latest.supply)} NUMMUS`;
+  const reductionPercentage = ((CHART.initialSupply-latest.supply)/CHART.initialSupply)*100;
+  const supplyValue = document.getElementById("chartSupplyValue");
+  supplyValue.textContent = `${numberFormatter.format(latest.supply)} NUMMUS`;
+  const reduction = document.createElement("span");
+  reduction.className = "reductionPercentage";
+  reduction.textContent = `−${Math.max(0,reductionPercentage).toFixed(2)}%`;
+  reduction.title = "Reduction from the initial 100,000,000 NUMMUS supply";
+  supplyValue.appendChild(reduction);
   document.getElementById("chartDateRange").textContent =
     `${formatChartDate(history[0].date)} → ${formatChartDate(latest.date)}`;
 }
