@@ -6,7 +6,7 @@
  * - Scansiona i burn del mint NUMMUS dal wallet burner
  * - Stampa i risultati a terminale
  * - Salva data/burn.json con:
- *   { count, totalUi, burns: [ { amountUi, url } ] }
+ *   { count, totalUi, burns: [ { amountUi, url, timestamp } ] }
  */
 
 const fs = require("fs");
@@ -258,8 +258,11 @@ function writeJsonAtomic(outPath, obj) {
       result.count += 1;
       const amountUi = bigIntToDecimalString(b.raw, mintDecimals);
       const url = `https://solscan.io/tx/${sig}`;
+      const timestamp = Number.isFinite(tx.blockTime)
+        ? new Date(tx.blockTime * 1000).toISOString()
+        : null;
 
-      result.burns.push({ amountUi, url });
+      result.burns.push({ amountUi, url, timestamp });
       console.log(`${amountUi} NUMMUS  |  ${url}`);
     }
 

@@ -230,23 +230,33 @@ body{
   color:#a73737;
 }
 
-/* TABELLA */
-table{
-  width:100%;
+/* TABELLA: intestazione + 5 transazioni visibili */
+.transactionsTable{
+  max-height:264px;
   margin-top:26px;
-  border-collapse:collapse;
-  background:rgba(5,5,5,0.22);
-  border-radius:14px;
+  overflow:auto;
   border:2px solid rgba(180,140,70,0.6);
-  overflow:hidden;
+  border-radius:14px;
+  background:rgba(5,5,5,0.22);
   backdrop-filter:blur(3px);
   box-shadow:0 0 18px rgba(0,0,0,0.8);
+}
+table{
+  width:100%;
+  border-collapse:collapse;
 }
 thead{
   background:rgba(50,35,20,0.5);
 }
+thead th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:#302719;
+}
 th,td{
-  padding:11px 14px;
+  height:44px;
+  padding:0 14px;
   text-shadow:0 2px 3px rgba(0,0,0,0.9);
 }
 th{
@@ -256,7 +266,8 @@ th{
 }
 th:nth-child(1), td:nth-child(1){text-align:left;}
 th:nth-child(2), td:nth-child(2){text-align:left;}
-th:nth-child(3), td:nth-child(3){text-align:right;}
+th:nth-child(3), td:nth-child(3){text-align:left; white-space:nowrap;}
+th:nth-child(4), td:nth-child(4){text-align:right;}
 
 td{
   font-size:15px;
@@ -355,18 +366,21 @@ footer{
   </div>
 
   <!-- TABELLA -->
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Amount</th>
-        <th>Transaction</th>
-      </tr>
-    </thead>
-    <tbody id="burnRows">
-      <tr><td colspan="3" style="padding:20px;text-align:center;">Loading…</td></tr>
-    </tbody>
-  </table>
+  <div class="transactionsTable" tabindex="0" aria-label="Burn transactions">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Amount</th>
+          <th>Date and time</th>
+          <th>Transaction</th>
+        </tr>
+      </thead>
+      <tbody id="burnRows">
+        <tr><td colspan="4" style="padding:20px;text-align:center;">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
 
 </div>
 
@@ -395,11 +409,18 @@ async function loadData(){
     tbody.innerHTML = "";
 
     burn.burns.forEach((b,i)=>{
+      const dateTime = b.timestamp
+        ? new Date(b.timestamp).toLocaleString("it-IT", {
+            dateStyle: "short",
+            timeStyle: "short"
+          })
+        : "—";
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${i+1}</td>
         <td>${Number(b.amountUi).toLocaleString()}</td>
-        <td><a class="link" href="${b.url}" target="_blank">Solscan</a></td>
+        <td>${dateTime}</td>
+        <td><a class="link" href="${b.url}" target="_blank" rel="noopener">Solscan</a></td>
       `;
       tbody.appendChild(tr);
     });
