@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -638,17 +638,14 @@ async function loadData(){
       Number(price.priceUsd).toFixed(6)+" USD";
 
     document.getElementById("update").textContent =
-      price.updatedAt ? new Date(price.updatedAt).toLocaleString() : "—";
+      price.updatedAt ? formatUtcDateTime(price.updatedAt) : "—";
 
     const tbody = document.getElementById("burnRows");
     tbody.innerHTML = "";
 
     burn.burns.forEach((b,i)=>{
       const dateTime = b.timestamp
-        ? new Date(b.timestamp).toLocaleString("it-IT", {
-            dateStyle: "short",
-            timeStyle: "short"
-          })
+        ? formatUtcDateTime(b.timestamp)
         : "—";
       const tr = document.createElement("tr");
       tr.dataset.transactionKey = b.url;
@@ -827,9 +824,22 @@ function formatCompact(value){
 }
 
 function formatChartDate(date){
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString("it-IT",{
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB",{
     day:"2-digit",month:"2-digit",year:"2-digit",timeZone:"UTC"
   });
+}
+
+function formatUtcDateTime(value,longMonth=false){
+  return new Intl.DateTimeFormat("en-GB",{
+    day:"2-digit",
+    month:longMonth ? "long" : "2-digit",
+    year:"numeric",
+    hour:"2-digit",
+    minute:"2-digit",
+    hourCycle:"h23",
+    timeZone:"UTC",
+    timeZoneName:"short"
+  }).format(new Date(value));
 }
 
 function hideChartTooltip(){
@@ -903,9 +913,7 @@ document.getElementById("supplyChartSvg").addEventListener("pointermove",event=>
   const tooltip = document.getElementById("supplyChartTooltip");
   tooltip.replaceChildren();
   const title = document.createElement("strong");
-  title.textContent = new Date(point.timestamp).toLocaleString("it-IT",{
-    day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"
-  });
+  title.textContent = formatUtcDateTime(point.timestamp,true);
   tooltip.appendChild(title);
   [["Supply",`${numberFormatter.format(point.supply)} NUMMUS`],["Burned",numberFormatter.format(point.burnedCumulative)]].forEach(([label,value])=>{
     const row = document.createElement("div");
