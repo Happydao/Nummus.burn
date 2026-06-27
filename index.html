@@ -278,6 +278,157 @@ tbody tr:hover{
   background:rgba(90,15,15,0.3);
 }
 
+/* GRAFICO RIDUZIONE SUPPLY */
+.supplyChart{
+  margin-top:26px;
+  padding:18px;
+  border:2px solid rgba(180,140,70,0.6);
+  border-radius:14px;
+  background:rgba(5,5,5,0.28);
+  backdrop-filter:blur(3px);
+  box-shadow:0 0 18px rgba(0,0,0,0.8);
+}
+.chartHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+}
+.chartTitle h2{
+  color:#f1e5c6;
+  font-size:18px;
+  letter-spacing:0.5px;
+}
+.chartTitle p{
+  margin-top:5px;
+  color:#cbbd9a;
+  font-size:12px;
+}
+.chartControls{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:9px;
+}
+#chartSupplyValue{
+  color:#fff;
+  font-size:18px;
+  font-weight:800;
+  white-space:nowrap;
+  text-shadow:0 3px 5px rgba(0,0,0,0.9);
+}
+.rangeSelector{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(42px, 1fr));
+  padding:3px;
+  border:1px solid rgba(180,140,70,0.45);
+  border-radius:8px;
+  background:rgba(0,0,0,0.35);
+}
+.rangeSelector button{
+  height:30px;
+  padding:0 8px;
+  border:0;
+  border-radius:6px;
+  color:#d7c8a4;
+  background:transparent;
+  cursor:pointer;
+  font:600 11px 'Cinzel', serif;
+}
+.rangeSelector button:hover{
+  color:#fff;
+  background:rgba(135,35,35,0.35);
+}
+.rangeSelector button.active{
+  color:#fff;
+  background:#762626;
+  box-shadow:0 0 8px rgba(150,35,35,0.45);
+}
+.chartPlot{
+  position:relative;
+  margin-top:14px;
+  min-height:280px;
+}
+#supplyChartSvg{
+  display:block;
+  width:100%;
+  height:auto;
+  min-height:280px;
+}
+.chartGrid{stroke:rgba(231,216,179,0.17);stroke-width:1;}
+.chartAxis{stroke:rgba(231,216,179,0.42);stroke-width:1.2;}
+.chartLabel{fill:#cbbd9a;font:11px Arial,sans-serif;}
+.chartAxisTitle{fill:#e7d8b3;font:600 11px 'Cinzel',serif;}
+.supplyArea{fill:url(#supplyGradient);}
+.supplyLine{
+  fill:none;
+  stroke:#b63b3b;
+  stroke-width:3;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  filter:drop-shadow(0 0 4px rgba(182,59,59,0.7));
+}
+.chartCrosshair{
+  display:none;
+  stroke:#e7d8b3;
+  stroke-width:1;
+  stroke-dasharray:4 4;
+}
+.chartHoverDot{
+  display:none;
+  fill:#180909;
+  stroke:#e7d8b3;
+  stroke-width:2.5;
+}
+.chartCapture{fill:transparent;cursor:crosshair;}
+.chartTooltip{
+  position:absolute;
+  display:none;
+  min-width:178px;
+  padding:9px 11px;
+  border:1px solid rgba(180,140,70,0.75);
+  border-radius:8px;
+  color:#fff;
+  background:rgba(20,8,8,0.96);
+  box-shadow:0 10px 25px rgba(0,0,0,0.65);
+  pointer-events:none;
+  transform:translate(-50%, -110%);
+  z-index:3;
+}
+.chartTooltip strong{
+  display:block;
+  margin-bottom:6px;
+  color:#e7d8b3;
+  font-size:12px;
+}
+.tooltipRow{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  font:12px Arial,sans-serif;
+}
+.tooltipRow + .tooltipRow{margin-top:4px;}
+.tooltipRow span{color:#cbbd9a;}
+.chartEmpty{
+  display:flex;
+  min-height:280px;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  color:#cbbd9a;
+  font-size:13px;
+  text-align:center;
+}
+@media(max-width:650px){
+  .supplyChart{padding:14px;}
+  .chartHeader{flex-direction:column;}
+  .chartControls{width:100%;align-items:stretch;}
+  #chartSupplyValue{text-align:left;}
+  .rangeSelector{grid-template-columns:repeat(5, minmax(0, 1fr));}
+  .rangeSelector button{padding:0 3px;}
+  .chartPlot,#supplyChartSvg,.chartEmpty{min-height:220px;}
+}
+
 /* FOOTER */
 footer{
   width:100%;
@@ -382,13 +533,59 @@ footer{
     </table>
   </div>
 
+  <!-- GRAFICO SUPPLY -->
+  <section class="supplyChart" aria-labelledby="supplyChartTitle">
+    <div class="chartHeader">
+      <div class="chartTitle">
+        <h2 id="supplyChartTitle">Supply Reduction</h2>
+        <p id="chartDateRange">Historical NUMMUS supply after burns</p>
+      </div>
+      <div class="chartControls">
+        <strong id="chartSupplyValue">—</strong>
+        <div class="rangeSelector" aria-label="Chart range">
+          <button type="button" data-chart-range="1D">1D</button>
+          <button type="button" data-chart-range="7D">7D</button>
+          <button type="button" data-chart-range="30D">30D</button>
+          <button type="button" data-chart-range="1Y">1Y</button>
+          <button type="button" data-chart-range="ALL" class="active">ALL</button>
+        </div>
+      </div>
+    </div>
+    <div class="chartPlot" id="supplyChartPlot">
+      <svg id="supplyChartSvg" viewBox="0 0 960 340" role="img" aria-label="NUMMUS supply reduction over time"></svg>
+      <div class="chartTooltip" id="supplyChartTooltip" role="tooltip"></div>
+    </div>
+  </section>
+
 </div>
 
 <script>
+const chartState = {
+  range: "ALL",
+  history: [],
+  points: []
+};
+
+const CHART = {
+  width: 960,
+  height: 340,
+  left: 90,
+  right: 24,
+  top: 24,
+  bottom: 48,
+  minSupply: 90000000,
+  maxSupply: 100000000
+};
+
+const numberFormatter = new Intl.NumberFormat("en-US", {maximumFractionDigits: 2});
+
 async function loadData(){
   try{
-    const burn = await fetch("data/burn.json").then(r=>r.json());
-    const price = await fetch("data/price.json").then(r=>r.json());
+    const cacheBuster = Date.now();
+    const [burn, price] = await Promise.all([
+      fetch(`data/burn.json?t=${cacheBuster}`).then(r=>r.json()),
+      fetch(`data/price.json?t=${cacheBuster}`).then(r=>r.json())
+    ]);
 
     document.getElementById("burnTotal").textContent =
       Number(burn.totalUi).toLocaleString();
@@ -425,17 +622,212 @@ async function loadData(){
       tbody.appendChild(tr);
     });
 
+    chartState.history = buildSupplyHistory(burn.burns, Number(price.totalSupplyTokensNum));
+    renderSupplyChart();
+
   }catch(e){
     console.error(e);
+    showChartEmpty("Unable to load supply history.");
   }
 }
+
+function buildSupplyHistory(burns, currentSupply){
+  if(!Number.isFinite(currentSupply)) return [];
+
+  const burnedByDate = new Map();
+  for(const burn of burns){
+    const amount = Number(burn.amountUi);
+    const date = burn.timestamp ? new Date(burn.timestamp) : null;
+    if(!Number.isFinite(amount) || !date || Number.isNaN(date.getTime())) continue;
+    const day = date.toISOString().slice(0,10);
+    burnedByDate.set(day, (burnedByDate.get(day) || 0) + amount);
+  }
+
+  const dailyBurns = [...burnedByDate.entries()]
+    .map(([date, amount])=>({date, amount}))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  const totalBurned = dailyBurns.reduce((sum,item)=>sum+item.amount,0);
+  let burnedCumulative = 0;
+
+  return dailyBurns.map(item=>{
+    burnedCumulative += item.amount;
+    return {
+      date:item.date,
+      supply:currentSupply + totalBurned - burnedCumulative,
+      burnedCumulative
+    };
+  });
+}
+
+function filterChartHistory(history, range){
+  if(range === "ALL" || history.length === 0) return history;
+  const latest = new Date(`${history.at(-1).date}T00:00:00Z`);
+  const days = range === "1D" ? 1 : range === "7D" ? 7 : range === "30D" ? 30 : 365;
+  const cutoff = new Date(latest);
+  cutoff.setUTCDate(cutoff.getUTCDate()-days);
+  return history.filter(item=>new Date(`${item.date}T00:00:00Z`) >= cutoff);
+}
+
+function renderSupplyChart(){
+  const history = filterChartHistory(chartState.history, chartState.range);
+  if(history.length === 0){
+    showChartEmpty("Supply history will appear after the next automatic data update.");
+    return;
+  }
+
+  const svg = document.getElementById("supplyChartSvg");
+  const plot = document.getElementById("supplyChartPlot");
+  plot.querySelector(".chartEmpty")?.remove();
+  svg.style.display = "block";
+
+  const plotWidth = CHART.width-CHART.left-CHART.right;
+  const plotHeight = CHART.height-CHART.top-CHART.bottom;
+  const firstTime = Date.parse(`${history[0].date}T00:00:00Z`);
+  const lastTime = Date.parse(`${history.at(-1).date}T00:00:00Z`);
+  const timeSpan = lastTime-firstTime || 1;
+  const dataMin = Math.min(...history.map(item=>item.supply));
+  const dataMax = Math.max(...history.map(item=>item.supply));
+  const yMin = Math.min(CHART.minSupply, Math.floor(dataMin/1000000)*1000000);
+  const yMax = Math.max(CHART.maxSupply, Math.ceil(dataMax/1000000)*1000000);
+
+  chartState.points = history.map(item=>{
+    const time = Date.parse(`${item.date}T00:00:00Z`);
+    const x = history.length === 1
+      ? CHART.left+plotWidth/2
+      : CHART.left+((time-firstTime)/timeSpan)*plotWidth;
+    const y = CHART.top+(1-(item.supply-yMin)/(yMax-yMin))*plotHeight;
+    return {...item,x,y};
+  });
+
+  const linePath = chartState.points.length === 1
+    ? `M ${CHART.left} ${chartState.points[0].y.toFixed(2)} L ${CHART.width-CHART.right} ${chartState.points[0].y.toFixed(2)}`
+    : chartState.points.map((point,index)=>`${index ? "L" : "M"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ");
+  const areaPath = chartState.points.length === 1
+    ? `${linePath} L ${CHART.width-CHART.right} ${CHART.height-CHART.bottom} L ${CHART.left} ${CHART.height-CHART.bottom} Z`
+    : `${linePath} L ${chartState.points.at(-1).x.toFixed(2)} ${CHART.height-CHART.bottom} L ${chartState.points[0].x.toFixed(2)} ${CHART.height-CHART.bottom} Z`;
+  const yTicks = Array.from({length:5},(_,i)=>yMin+((yMax-yMin)/4)*i);
+  const xIndexes = [...new Set([0,Math.floor((history.length-1)/2),history.length-1])];
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="supplyGradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#b63b3b" stop-opacity="0.34" />
+        <stop offset="100%" stop-color="#b63b3b" stop-opacity="0.03" />
+      </linearGradient>
+    </defs>
+    <text class="chartAxisTitle" x="${CHART.left}" y="15">NUMMUS</text>
+    ${yTicks.map(value=>{
+      const y = CHART.top+(1-(value-yMin)/(yMax-yMin))*plotHeight;
+      return `<line class="chartGrid" x1="${CHART.left}" y1="${y}" x2="${CHART.width-CHART.right}" y2="${y}" />
+        <text class="chartLabel" x="${CHART.left-12}" y="${y+4}" text-anchor="end">${formatCompact(value)}</text>`;
+    }).join("")}
+    ${xIndexes.map(index=>{
+      const point = chartState.points[index];
+      return `<text class="chartLabel" x="${point.x}" y="${CHART.height-18}" text-anchor="middle">${formatChartDate(point.date)}</text>`;
+    }).join("")}
+    <line class="chartAxis" x1="${CHART.left}" y1="${CHART.height-CHART.bottom}" x2="${CHART.width-CHART.right}" y2="${CHART.height-CHART.bottom}" />
+    <line class="chartAxis" x1="${CHART.left}" y1="${CHART.top}" x2="${CHART.left}" y2="${CHART.height-CHART.bottom}" />
+    <path class="supplyArea" d="${areaPath}" />
+    <path class="supplyLine" d="${linePath}" />
+    <line class="chartCrosshair" id="chartCrosshair" y1="${CHART.top}" y2="${CHART.height-CHART.bottom}" />
+    <circle class="chartHoverDot" id="chartHoverDot" r="5" />
+    <rect class="chartCapture" x="${CHART.left}" y="${CHART.top}" width="${plotWidth}" height="${plotHeight}" />
+  `;
+
+  const latest = history.at(-1);
+  document.getElementById("chartSupplyValue").textContent = `${numberFormatter.format(latest.supply)} NUMMUS`;
+  document.getElementById("chartDateRange").textContent =
+    `${formatChartDate(history[0].date)} → ${formatChartDate(latest.date)}`;
+}
+
+function showChartEmpty(message){
+  chartState.points = [];
+  const svg = document.getElementById("supplyChartSvg");
+  const plot = document.getElementById("supplyChartPlot");
+  svg.style.display = "none";
+  plot.querySelector(".chartEmpty")?.remove();
+  const empty = document.createElement("div");
+  empty.className = "chartEmpty";
+  empty.textContent = message;
+  plot.appendChild(empty);
+  document.getElementById("chartSupplyValue").textContent = "—";
+  document.getElementById("chartDateRange").textContent = "Historical NUMMUS supply after burns";
+}
+
+function formatCompact(value){
+  return `${(value/1000000).toFixed(value%1000000===0 ? 0 : 1)}M`;
+}
+
+function formatChartDate(date){
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("it-IT",{
+    day:"2-digit",month:"2-digit",year:"2-digit",timeZone:"UTC"
+  });
+}
+
+function hideChartTooltip(){
+  document.getElementById("supplyChartTooltip").style.display = "none";
+  const crosshair = document.getElementById("chartCrosshair");
+  const dot = document.getElementById("chartHoverDot");
+  if(crosshair) crosshair.style.display = "none";
+  if(dot) dot.style.display = "none";
+}
+
+document.querySelectorAll("[data-chart-range]").forEach(button=>{
+  button.addEventListener("click",()=>{
+    chartState.range = button.dataset.chartRange;
+    document.querySelectorAll("[data-chart-range]").forEach(item=>item.classList.toggle("active",item===button));
+    hideChartTooltip();
+    renderSupplyChart();
+  });
+});
+
+document.getElementById("supplyChartSvg").addEventListener("pointermove",event=>{
+  if(chartState.points.length===0) return;
+  const svg = event.currentTarget;
+  const rect = svg.getBoundingClientRect();
+  const x = ((event.clientX-rect.left)/rect.width)*CHART.width;
+  const point = chartState.points.reduce((nearest,current)=>
+    Math.abs(current.x-x)<Math.abs(nearest.x-x) ? current : nearest
+  );
+  const crosshair = document.getElementById("chartCrosshair");
+  const dot = document.getElementById("chartHoverDot");
+  crosshair.setAttribute("x1",point.x);
+  crosshair.setAttribute("x2",point.x);
+  crosshair.style.display = "block";
+  dot.setAttribute("cx",point.x);
+  dot.setAttribute("cy",point.y);
+  dot.style.display = "block";
+
+  const tooltip = document.getElementById("supplyChartTooltip");
+  tooltip.replaceChildren();
+  const title = document.createElement("strong");
+  title.textContent = new Date(`${point.date}T00:00:00Z`).toLocaleDateString("it-IT",{
+    day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"
+  });
+  tooltip.appendChild(title);
+  [["Supply",`${numberFormatter.format(point.supply)} NUMMUS`],["Burned",numberFormatter.format(point.burnedCumulative)]].forEach(([label,value])=>{
+    const row = document.createElement("div");
+    row.className = "tooltipRow";
+    const name = document.createElement("span");
+    const amount = document.createElement("b");
+    name.textContent = label;
+    amount.textContent = value;
+    row.append(name,amount);
+    tooltip.appendChild(row);
+  });
+  tooltip.style.display = "block";
+  tooltip.style.left = `${(point.x/CHART.width)*rect.width}px`;
+  tooltip.style.top = `${(point.y/CHART.height)*rect.height}px`;
+});
+
+document.getElementById("supplyChartSvg").addEventListener("pointerleave",hideChartTooltip);
 
 loadData();
 setInterval(loadData, 60000);
 </script>
 
 <footer>
-  © 2023 Torrino DAO — Crafted with passion by HAPPY — <a class="footer-link" href="https://happydev.fi" target="_blank" rel="noopener">happydev.fi</a>
+  © 2023 <a class="footer-link" href="https://torrino.space" target="_blank" rel="noopener">Torrino DAO</a> — Crafted with passion by <a class="footer-link" href="https://happydev.fi" target="_blank" rel="noopener">HAPPY</a>
 </footer>
 
 </body>
