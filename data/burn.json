@@ -1,6 +1,6 @@
 {
-  "count": 24,
-  "totalUi": "1353784.805487",
+  "count": 34,
+  "totalUi": "2175922.249096",
   "burns": [
     {
       "amountUi": "63848.828284",
@@ -121,6 +121,56 @@
       "amountUi": "24346.853195",
       "url": "https://solscan.io/tx/37TSVfUSZ61FLXhoVviD3PRuw8LtDLxToLZd4nox1CrRqkAcHLU7t2b8ikHhQ67tZLcUdsjh2xK9AHHTMQLqPebP",
       "timestamp": "2025-12-15T07:24:56.000Z"
+    },
+    {
+      "amountUi": "49545.433528",
+      "url": "https://solscan.io/tx/3cfDwEUeyTuUH8B2r9hiU4PBZEFdzSiM1RooWCsLwpvifqEnkdNyZ2WuYcaKVfhm7u2JVnJ5dhB4nLhbm3iG3fFX",
+      "timestamp": "2025-12-06T08:54:56.000Z"
+    },
+    {
+      "amountUi": "51880.480475",
+      "url": "https://solscan.io/tx/656vRA6tCnCCP4JLdjiL8S3S5tdpQm2G9ZHpNLtF9uW937KYMozpiTkkyQtVactxZCWoQCzRm7BQHURghoyu2kYN",
+      "timestamp": "2025-12-04T12:00:38.000Z"
+    },
+    {
+      "amountUi": "132515.797698",
+      "url": "https://solscan.io/tx/c69sCMHVPMqCczVwPLHoxekckVnm45KxrivXjwz4XAsV3D3tt8xx9zVNdn5CgkBc5MirLKzEWzFZqnv9Coa8v9W",
+      "timestamp": "2025-12-01T18:43:43.000Z"
+    },
+    {
+      "amountUi": "10010",
+      "url": "https://solscan.io/tx/4VrCnwVQbXU8HYG27uo4zHhcHMm5eswNWquztoUSqzMnnCRY5zNUnGHzX5gkhBUivbhBzQpgMaL1TPPAPMARciHJ",
+      "timestamp": "2025-11-28T17:58:33.000Z"
+    },
+    {
+      "amountUi": "52931.872942",
+      "url": "https://solscan.io/tx/zY59r9oKo3ssKbBvj9LJDLPxUZPVaCtythCyoBfGStAXb5U1mTXz1T7oFDiaVNpukbzt3iUJgC9RusPhDE5SizL",
+      "timestamp": "2025-11-26T17:14:54.000Z"
+    },
+    {
+      "amountUi": "255435.50546",
+      "url": "https://solscan.io/tx/5FtajNDae7xjRisW3jxoWtXjKJ2oz2XYNkkxkJ7CgH3KLqW855gDYZYnMXZU1cC2norKezyxGQ7vtggYdztaLP4a",
+      "timestamp": "2025-11-19T14:36:03.000Z"
+    },
+    {
+      "amountUi": "128858.220119",
+      "url": "https://solscan.io/tx/3Si1fV3i3yBkD8XtFvhdoxLFHY7ue2wiA9t5jWUuC2dDm1q4WHUiB9CjmxmMfWnjjfaneooCgBTNaMHxCA8r94cy",
+      "timestamp": "2025-11-13T18:43:03.000Z"
+    },
+    {
+      "amountUi": "25388.186115",
+      "url": "https://solscan.io/tx/2exnJt2wDbDbyY9cuVfeiHDnwXcvZuwvcySKqEVv2tZbNZeueBMHznHjqidSxQwkJGpR74zk8xrr4pheE9pw1QW1",
+      "timestamp": "2025-11-08T08:21:53.000Z"
+    },
+    {
+      "amountUi": "56868.137617",
+      "url": "https://solscan.io/tx/29qPVUJVEBrikbKA6Lj2dY6PefVLRe4csS2b9tDr8hYqfAyazshY4xwhEqUFvTY1V14RLU2YUcxjqdSnqU6orc8Q",
+      "timestamp": "2025-11-03T16:42:32.000Z"
+    },
+    {
+      "amountUi": "58703.809655",
+      "url": "https://solscan.io/tx/7fFfyJae2xPxb2cwp5sKevTL1sUMCM6ANQBjEr57TonXqa9KxhEpnTGt9c1sAAU8bnBnawmMiHpRTg1wDBkYegs",
+      "timestamp": "2025-10-17T07:47:04.000Z"
     }
   ]
 }
