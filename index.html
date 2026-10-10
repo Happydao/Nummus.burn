@@ -6,476 +6,690 @@
 
 <title>NUMMUS BURN — Live</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{
-  font-family:'Cinzel', serif;
-  color:#fff;
-  background:#000;
-  overflow-x:hidden;
+:root {
+  --paper:#f4f1e8;
+  --surface:#fbfaf6;
+  --ink:#1d1c17;
+  --muted:#77746a;
+  --gold:#927632;
+  --line:#ded9cc;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'DM Sans',Arial,sans-serif
 }
-
-/* VIDEO SFONDO */
-#bgvid{
-  position:fixed;
-  top:0;left:0;
-  width:100vw;
-  height:100vh;
-  object-fit:cover;
-  z-index:-3;
+* {
+  margin:0;
+  padding:0;
+  box-sizing:border-box
 }
-#overlay{
-  position:fixed;
-  top:0;left:0;
-  width:100vw;height:100vh;
-  background:rgba(0,0,0,0.65);
-  z-index:-2;
+body {
+  font-family:var(--sans);
+  color:var(--ink);
+  background:var(--paper);
+  line-height:1.6
 }
-
-/* TOP LINK CARD */
-.topLinkCard{
-  position:fixed;
-  top:15px;right:15px;
-  background:rgba(25,25,25,0.7);
-  border:1px solid rgba(230,210,160,0.5);
-  padding:5px 9px;
-  border-radius:8px;
-  text-decoration:none;
-  color:#fff;
-  font-size:12px;
-  backdrop-filter:blur(4px);
-  transition:0.25s;
-  z-index:50;
-  text-shadow:0 2px 4px rgba(0,0,0,0.6);
+a {
+  color:inherit;
+  text-decoration:none
 }
-.topLinkCard:hover{
-  color:#a73737;
-  border-color:#a73737;
-  box-shadow:0 0 12px rgba(80,0,0,0.6);
+button {
+  font:inherit
 }
-@media(max-width:800px){
-  .topLinkCard{
-    position:static;
-    display:block;
-    width:max-content;
-    margin:10px auto 0 auto;
-    padding:4px 7px;
-    font-size:11px;
-  }
+a,button {
+  touch-action:manipulation
 }
-
-/* HEADER: LOGO - TITOLO - LOGO */
-#headerBar{
-  width:92%;
-  max-width:1200px;
-  margin:25px auto 10px auto;
+a:focus-visible,button:focus-visible,[tabindex]:focus-visible {
+  outline:2px solid var(--gold);
+  outline-offset:4px
+}
+.siteHeader {
+  border-bottom:1px solid var(--line)
+}
+.navInner {
+  max-width:1180px;
+  margin:auto;
+  padding:18px 0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px
+}
+.brand {
+  display:flex;
+  align-items:center;
+  gap:12px
+}
+.brand img {
+  width:44px;
+  height:44px;
+  object-fit:contain;
+  border-radius:50%;
+  box-shadow:0 3px 10px #221d1520
+}
+.brandName {
+  font:19px 'Cinzel',serif;
+  letter-spacing:2px
+}
+.brandName span {
+  display:block;
+  font-size:9px;
+  letter-spacing:3.5px;
+  color:var(--gold)
+}
+.navLinks {
+  display:flex;
+  align-items:center;
+  gap:30px;
+  font-size:13px
+}
+.navLinks a:hover {
+  color:var(--gold)
+}
+.backLink {
+  border:1px solid var(--line);
+  border-radius:30px;
+  padding:10px 20px;
+  background:var(--surface)
+}
+#main {
+  max-width:1180px;
+  width:calc(100% - 64px);
+  margin:0 auto
+}
+.hero {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:40px;
+  padding:64px 0 48px
+}
+.eyebrow {
+  font-size:10px;
+  letter-spacing:2.6px;
+  text-transform:uppercase;
+  color:var(--gold);
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:10px
+}
+.eyebrow:before {
+  content:'';
+  width:6px;
+  height:6px;
+  background:var(--gold);
+  border-radius:50%;
+  box-shadow:0 0 0 4px #92763212
+}
+h1 {
+  font:500 clamp(44px,5.2vw,72px)/1.04 var(--serif);
+  letter-spacing:-1.5px;
+  margin:20px 0
+}
+h1 em {
+  font-weight:500;
+  color:var(--gold)
+}
+.hero p {
+  max-width:570px;
+  font-size:15px;
+  color:#69665d;
+  line-height:1.85
+}
+.heroSeal {
+  position:relative;
+  width:310px;
+  height:310px;
+  border:1px solid var(--line);
+  border-radius:50%;
+  padding:26px;
+  flex-shrink:0;
+  margin:14px 35px 14px 0;
+  isolation:isolate;
+}
+.heroSeal:after {
+  content:'';
+  position:absolute;
+  inset:-14px;
+  border:1px dashed #cbbd9c;
+  border-radius:50%;
+  pointer-events:none;
+}
+.heroSeal img {
+  position:relative;
+  display:block;
+  z-index:2;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  border-radius:50%;
+  box-shadow:0 0 14px #ffbe5280,0 12px 28px #8e411b30;
+}
+/* Decorative fire is independent of the data and chart scripts. */
+.flameHalo {
+  position:absolute;
+  inset:24px;
+  border-radius:50%;
+  background:#ffad38;
+  box-shadow:0 0 15px #ffc563,0 0 32px #e9692445;
+  animation:emberGlow 2.8s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+.flameHalo i {
+  position:absolute;
+  left:var(--x);
+  top:var(--y);
+  width:var(--size);
+  height:calc(var(--size) * 2.5);
+  border-radius:80% 20% 65% 35%;
+  clip-path:polygon(50% 0%,57% 22%,80% 44%,73% 59%,94% 78%,80% 96%,45% 100%,12% 90%,5% 72%,26% 49%,32% 30%);
+  background:linear-gradient(0deg,#fff3bb 0%,#ffc04f 35%,#ef7423 65%,#e1491200 100%);
+  filter:blur(1px);
+  transform-origin:50% 100%;
+  animation:flameFlicker var(--speed) ease-in-out var(--delay) infinite alternate;
+}
+@keyframes flameFlicker {
+  0% {transform:translate(-50%,-85%) rotate(-14deg) scale(.8,.8);opacity:.5}
+  45% {transform:translate(-45%,-95%) rotate(9deg) scale(1,1.15);opacity:.85}
+  100% {transform:translate(-55%,-100%) rotate(-6deg) scale(.7,1.35);opacity:.65}
+}
+@keyframes emberGlow {
+  from {filter:drop-shadow(0 0 3px #f89a4230)}
+  to {filter:drop-shadow(0 -5px 10px #f89a4260)}
+}
+.sectionLabel {
   display:flex;
   justify-content:space-between;
-  align-items:center;
   gap:16px;
-}
-
-/* CARD LOGO CIRCOLARE */
-.logoCard{
-  flex:0 0 auto;
-  width:120px;
-  height:120px;
-  border-radius:50%;
-  border:2px solid rgba(230,210,160,0.9);
-  background:rgba(5,5,5,0.35);
-  display:flex;
   align-items:center;
-  justify-content:center;
-  box-shadow:
-    0 0 10px rgba(0,0,0,0.8),
-    0 0 18px rgba(180,140,70,0.7);
-  transition:0.25s;
+  margin-bottom:14px
 }
-.logoCard img{
-  width:80%;
-  height:80%;
-  object-fit:contain;
-  filter:drop-shadow(0 0 4px #550000);
-  animation:logoGlow 1.8s infinite alternate ease-in-out;
-}
-.logoCard:hover{
-  box-shadow:
-    0 0 18px rgba(0,0,0,0.9),
-    0 0 26px rgba(120,20,20,0.85);
-}
-@keyframes logoGlow{
-  0%{filter:drop-shadow(0 0 4px #3b0000);}
-  100%{filter:drop-shadow(0 0 14px #b03838);}
-}
-
-/* CARD TITOLO: bordo rosso fisso */
-.titleCard{
-  flex:1;
-  background:rgba(10,10,10,0.22);
-  border:2px solid rgba(135,35,35,0.9);
-  border-radius:18px;
-  padding:18px 10px;
-  text-align:center;
-  backdrop-filter:blur(4px);
-  box-shadow:0 0 20px rgba(0,0,0,0.9);
-  transition:0.25s;
-}
-.titleCard:hover{
-  box-shadow:0 0 28px rgba(80,0,0,0.85);
-}
-
-/* TITOLO CON GLOW ROSSO PULSANTE, STILE LOGHI */
-.title{
-  font-size:32px;
-  font-weight:800;
-  color:#f1e5c6;
+.sectionLabel h2 {
+  font-size:10px;
+  font-weight:500;
+  text-transform:uppercase;
   letter-spacing:2px;
-  animation:titleGlow 1.9s infinite alternate ease-in-out;
+  color:var(--muted)
 }
-@keyframes titleGlow{
-  0%{
-    text-shadow:
-      0 2px 4px rgba(0,0,0,0.95),
-      0 0 4px rgba(255,255,255,0.10),
-      0 0 6px rgba(120,30,30,0.35),
-      0 0 0 rgba(0,0,0,0);
-  }
-  100%{
-    text-shadow:
-      0 2px 6px rgba(0,0,0,1),
-      0 0 4px rgba(255,255,255,0.08),
-      0 0 14px rgba(185,40,40,0.9),
-      0 0 22px rgba(185,40,40,0.7);
-  }
+.sectionLabel span {
+  font-size:11px;
+  color:var(--muted)
 }
-
-/* MOBILE HEADER */
-@media(max-width:800px){
-  #headerBar{
-    flex-wrap:wrap;
-    justify-content:space-between;
-  }
-  .logoCard{
-    width:96px;
-    height:96px;
-  }
-  .logoCard:first-child{order:0;}
-  .logoCard:last-child{order:1;}
-  .titleCard{
-    order:2;
-    flex:1 1 100%;
-  }
-  .title{
-    font-size:20px;
-  }
-}
-/* MAIN WRAPPER */
-#main{
-  width:92%;
-  max-width:1200px;
-  margin:10px auto 30px auto;
-}
-
-/* GRIGLIA CARDS */
-.cardsLayout{
+.cardsLayout {
   display:grid;
-  grid-template-columns:1.4fr 1fr 1fr 1fr;
-  gap:16px;
-  margin-top:20px;
+  grid-template-columns:1.25fr 1fr 1fr 1.15fr;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+  overflow:hidden
 }
-@media(max-width:1000px){
-  .cardsLayout{grid-template-columns:1fr 1fr;}
+.card {
+  padding:25px 23px;
+  min-width:0
 }
-@media(max-width:600px){
-  .cardsLayout{grid-template-columns:1fr;}
+.card+.card {
+  border-left:1px solid var(--line)
 }
-
-/* CARD BASE, QUASI TRASPARENTE */
-.card{
-  background:rgba(5,5,5,0.18);
-  border:2px solid rgba(180,140,70,0.6);
-  border-radius:14px;
-  padding:12px 14px;
-  backdrop-filter:blur(2px);
-  transition:0.25s;
-  box-shadow:0 0 14px rgba(0,0,0,0.7);
+.card:first-child {
+  background:linear-gradient(120deg,#eee6ce80,transparent)
 }
-.card:hover{
-  border-color:rgba(125,32,32,0.85);
-  box-shadow:0 0 20px rgba(80,0,0,0.75);
+.card label {
+  display:block;
+  font-size:9px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:1.6px;
+  color:var(--muted)
 }
-.card label{
-  font-size:13px;
-  color:#e7d8b3;
-  text-shadow:0 2px 3px rgba(0,0,0,0.8);
+.value {
+  font-size:24px;
+  font-weight:500;
+  letter-spacing:-.7px;
+  font-variant-numeric:tabular-nums;
+  margin-top:8px;
+  overflow-wrap:anywhere
 }
-.value{
-  font-size:20px;
-  font-weight:800;
-  margin-top:4px;
-  color:#ffffff;
-  text-shadow:0 3px 5px rgba(0,0,0,0.9);
+.card:first-child>.value:first-of-type {
+  color:var(--gold)
 }
-
-/* LINK: bianco -> rosso scuro */
-.link{
-  color:#ffffff;
-  text-decoration:none;
-  transition:0.25s;
-  text-shadow:0 2px 4px rgba(0,0,0,0.9);
+#burnUSD {
+  font-size:17px
 }
-.link:hover{
-  color:#a73737;
+#update {
+  font-size:11px;
+  letter-spacing:0;
+  color:var(--muted)
 }
-
-/* TABELLA: intestazione + 5 transazioni visibili */
-.transactionsTable{
+.card .link {
+  font-size:17px;
+  letter-spacing:0
+}
+.link {
+  color:var(--gold)
+}
+.link:hover {
+  text-decoration:underline
+}
+.reductionPercentage {
+  display:inline-block;
+  margin-left:8px;
+  font:500 10px var(--sans);
+  color:var(--gold);
+  padding:4px 7px;
+  border-radius:20px;
+  background:#92763212;
+  vertical-align:middle
+}
+.historyHeading {
+  margin-top:40px;
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:15px
+}
+.historyHeading h2,.chartTitle h2 {
+  font:500 30px var(--serif)
+}
+.historyHeading p {
+  font-size:11px;
+  color:var(--muted)
+}
+.transactionsTable {
   max-height:264px;
-  margin-top:26px;
+  margin-top:16px;
   overflow:auto;
-  border:2px solid rgba(180,140,70,0.6);
-  border-radius:14px;
-  background:rgba(5,5,5,0.22);
-  backdrop-filter:blur(3px);
-  box-shadow:0 0 18px rgba(0,0,0,0.8);
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+  scrollbar-color:#c9c0aa transparent;
+  scrollbar-width:thin
 }
-table{
+table {
   width:100%;
-  border-collapse:collapse;
+  border-collapse:collapse
 }
-thead{
-  background:rgba(50,35,20,0.5);
-}
-thead th{
+thead th {
   position:sticky;
   top:0;
   z-index:1;
-  background:#302719;
+  background:#eeeae0
 }
-th,td{
+th,td {
   height:44px;
-  padding:0 14px;
-  text-shadow:0 2px 3px rgba(0,0,0,0.9);
+  padding:0 22px;
+  text-align:left;
+  white-space:nowrap
 }
-th{
-  font-size:14px;
-  color:#e7d8b3;
-  font-weight:600;
+th {
+  font-size:9px;
+  color:var(--muted);
+  font-weight:500;
+  text-transform:uppercase;
+  letter-spacing:1.6px
 }
-th:nth-child(1), td:nth-child(1){text-align:left;}
-th:nth-child(2), td:nth-child(2){text-align:left;}
-th:nth-child(3), td:nth-child(3){text-align:left; white-space:nowrap;}
-th:nth-child(4), td:nth-child(4){text-align:right;}
-
-td{
-  font-size:15px;
-  color:#ffffff;
-  border-bottom:1px solid rgba(180,140,70,0.25);
+td {
+  font-size:12px;
+  border-bottom:1px solid #ded9cc80;
+  font-variant-numeric:tabular-nums
 }
-tbody tr:hover{
-  background:rgba(90,15,15,0.3);
+td:first-child {
+  color:#999386;
+  font-size:10px
 }
-tbody tr{cursor:pointer;}
-tbody tr.selected{
-  background:rgba(125,32,32,0.55);
-  box-shadow:inset 4px 0 0 #d9bd79;
+td:nth-child(2) {
+  font-weight:600
 }
-tbody tr:focus-visible{
-  outline:2px solid #d9bd79;
-  outline-offset:-2px;
+th:last-child,td:last-child {
+  text-align:right
 }
-
-/* GRAFICO RIDUZIONE SUPPLY */
-.supplyChart{
-  margin-top:26px;
-  padding:18px;
-  border:2px solid rgba(180,140,70,0.6);
-  border-radius:14px;
-  background:rgba(5,5,5,0.28);
-  backdrop-filter:blur(3px);
-  box-shadow:0 0 18px rgba(0,0,0,0.8);
+tbody tr {
+  cursor:pointer
 }
-.chartHeader{
+tbody tr:hover {
+  background:#f0ebdd
+}
+tbody tr.selected {
+  background:#eae1c9;
+  box-shadow:inset 3px 0 0 var(--gold)
+}
+tbody tr:focus-visible {
+  outline-offset:-2px
+}
+.supplyChart {
+  margin-top:32px;
+  padding:28px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface)
+}
+.chartHeader {
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
-  gap:18px;
+  gap:18px
 }
-.chartTitle h2{
-  color:#f1e5c6;
-  font-size:18px;
-  letter-spacing:0.5px;
+.chartTitle p {
+  margin-top:6px;
+  color:var(--muted);
+  font-size:11px
 }
-.chartTitle p{
-  margin-top:5px;
-  color:#cbbd9a;
-  font-size:12px;
-}
-.chartControls{
+.chartControls {
   display:flex;
   flex-direction:column;
   align-items:flex-end;
-  gap:9px;
+  gap:12px
 }
-#chartSupplyValue{
-  color:#fff;
-  font-size:18px;
-  font-weight:800;
-  white-space:nowrap;
-  text-shadow:0 3px 5px rgba(0,0,0,0.9);
+#chartSupplyValue {
+  font-size:17px;
+  font-weight:500;
+  font-variant-numeric:tabular-nums
 }
-.reductionPercentage{
-  margin-left:9px;
-  color:#d45a5a;
-  font-size:14px;
-}
-.rangeSelector{
+.rangeSelector {
   display:grid;
-  grid-template-columns:repeat(5, minmax(42px, 1fr));
+  grid-template-columns:repeat(5,minmax(38px,1fr));
   padding:3px;
-  border:1px solid rgba(180,140,70,0.45);
-  border-radius:8px;
-  background:rgba(0,0,0,0.35);
+  border:1px solid var(--line);
+  border-radius:7px;
+  background:var(--paper)
 }
-.rangeSelector button{
-  height:30px;
-  padding:0 8px;
+.rangeSelector button {
+  height:28px;
+  padding:0 10px;
   border:0;
-  border-radius:6px;
-  color:#d7c8a4;
+  border-radius:4px;
+  color:var(--muted);
   background:transparent;
   cursor:pointer;
-  font:600 11px 'Cinzel', serif;
+  font-size:10px
 }
-.rangeSelector button:hover{
+.rangeSelector button:hover {
+  background:#e6dfcd;
+  color:var(--ink)
+}
+.rangeSelector button.active {
   color:#fff;
-  background:rgba(135,35,35,0.35);
+  background:var(--ink)
 }
-.rangeSelector button.active{
-  color:#fff;
-  background:#762626;
-  box-shadow:0 0 8px rgba(150,35,35,0.45);
-}
-.chartPlot{
+.chartPlot {
   position:relative;
-  margin-top:14px;
-  min-height:280px;
+  margin-top:20px;
+  min-height:220px
 }
-#supplyChartSvg{
+#supplyChartSvg {
   display:block;
   width:100%;
   height:auto;
-  min-height:280px;
+  min-height:220px
 }
-.chartGrid{stroke:rgba(231,216,179,0.17);stroke-width:1;}
-.chartAxis{stroke:rgba(231,216,179,0.42);stroke-width:1.2;}
-.chartLabel{fill:#cbbd9a;font:11px Arial,sans-serif;}
-.chartAxisTitle{fill:#e7d8b3;font:600 11px 'Cinzel',serif;}
-.supplyArea{fill:url(#supplyGradient);}
-.supplyLine{
+.chartGrid {
+  stroke:#e5e0d5;
+  stroke-width:1
+}
+.chartAxis {
+  stroke:#d4ccbb;
+  stroke-width:1
+}
+.chartLabel {
+  fill:#827b6b;
+  font:11px var(--sans)
+}
+.chartAxisTitle {
+  fill:#827b6b;
+  font:10px var(--sans);
+  letter-spacing:1px
+}
+.supplyArea {
+  fill:url(#supplyGradient)
+}
+#supplyGradient stop {
+  stop-color:var(--gold)
+}
+.supplyLine {
   fill:none;
-  stroke:#b63b3b;
-  stroke-width:3;
-  stroke-linecap:round;
-  stroke-linejoin:round;
-  filter:drop-shadow(0 0 4px rgba(182,59,59,0.7));
-}
-.supplyMarker{
-  fill:#1b0909;
-  stroke:#d9bd79;
-  stroke-width:2.2;
-  filter:drop-shadow(0 0 3px rgba(182,59,59,0.85));
-  cursor:pointer;
-}
-.supplyMarker:hover,
-.supplyMarker.selected{
-  fill:#d9bd79;
-  stroke:#fff;
-  stroke-width:3;
-  filter:drop-shadow(0 0 7px rgba(217,189,121,0.95));
-}
-.chartCrosshair{
-  display:none;
-  pointer-events:none;
-  stroke:#e7d8b3;
-  stroke-width:1;
-  stroke-dasharray:4 4;
-}
-.chartHoverDot{
-  display:none;
-  pointer-events:none;
-  fill:#180909;
-  stroke:#e7d8b3;
+  stroke:var(--gold);
   stroke-width:2.5;
+  stroke-linecap:round;
+  stroke-linejoin:round
 }
-.chartCapture{fill:transparent;cursor:crosshair;}
-.chartTooltip{
+.supplyMarker {
+  fill:var(--surface);
+  stroke:var(--gold);
+  stroke-width:2;
+  cursor:pointer
+}
+.supplyMarker:hover,.supplyMarker.selected {
+  fill:var(--ink);
+  stroke:var(--gold);
+  stroke-width:3
+}
+.chartCrosshair {
+  display:none;
+  pointer-events:none;
+  stroke:var(--gold);
+  stroke-width:1;
+  stroke-dasharray:4 4
+}
+.chartHoverDot {
+  display:none;
+  pointer-events:none;
+  fill:var(--ink);
+  stroke:var(--gold);
+  stroke-width:2.5
+}
+.chartCapture {
+  fill:transparent;
+  cursor:crosshair
+}
+.chartTooltip {
   position:absolute;
   display:none;
   min-width:178px;
-  padding:9px 11px;
-  border:1px solid rgba(180,140,70,0.75);
+  padding:12px 14px;
+  border:1px solid var(--line);
   border-radius:8px;
-  color:#fff;
-  background:rgba(20,8,8,0.96);
-  box-shadow:0 10px 25px rgba(0,0,0,0.65);
+  color:var(--ink);
+  background:#fbfaf6fa;
+  box-shadow:0 8px 24px #332b191c;
   pointer-events:none;
-  transform:translate(-50%, -110%);
-  z-index:3;
+  transform:translate(-50%,-110%);
+  z-index:3
 }
-.chartTooltip strong{
+.chartTooltip strong {
   display:block;
-  margin-bottom:6px;
-  color:#e7d8b3;
-  font-size:12px;
+  margin-bottom:7px;
+  color:var(--gold);
+  font-size:11px
 }
-.tooltipRow{
+.tooltipRow {
   display:flex;
   justify-content:space-between;
   gap:16px;
-  font:12px Arial,sans-serif;
+  font-size:11px
 }
-.tooltipRow + .tooltipRow{margin-top:4px;}
-.tooltipRow span{color:#cbbd9a;}
-.chartEmpty{
+.tooltipRow+.tooltipRow {
+  margin-top:4px
+}
+.tooltipRow span {
+  color:var(--muted)
+}
+.chartEmpty {
   display:flex;
-  min-height:280px;
+  min-height:220px;
   align-items:center;
   justify-content:center;
   padding:24px;
-  color:#cbbd9a;
+  color:var(--muted);
   font-size:13px;
-  text-align:center;
+  text-align:center
 }
-@media(max-width:650px){
-  .supplyChart{padding:14px;}
-  .chartHeader{flex-direction:column;}
-  .chartControls{width:100%;align-items:stretch;}
-  #chartSupplyValue{text-align:left;}
-  .rangeSelector{grid-template-columns:repeat(5, minmax(0, 1fr));}
-  .rangeSelector button{padding:0 3px;}
-  .chartPlot,#supplyChartSvg,.chartEmpty{min-height:220px;}
+footer {
+  max-width:1180px;
+  width:calc(100% - 64px);
+  margin:38px auto 28px;
+  padding-top:22px;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  font-size:10px;
+  display:flex;
+  justify-content:space-between;
+  gap:20px
 }
-
-/* FOOTER */
-footer{
-  width:100%;
-  text-align:center;
-  margin:24px 0 32px 0;
-  color:#e7d8b3;
-  font-size:12px;
-  text-shadow:0 2px 3px rgba(0,0,0,0.85);
+.footer-link {
+  color:var(--gold)
 }
-.footer-link{
-  color:#2f7bdc;
-  text-decoration:underline;
+.footerMotto {
+  letter-spacing:1.6px;
+  text-transform:uppercase;
+  font-size:9px
 }
-@media(max-width:800px){
-  footer{
+@media(max-width:1250px) {
+  .navInner {
+    width:calc(100% - 64px)
+  }
+}
+@media(max-width:950px) {
+  .cardsLayout {
+    grid-template-columns:1fr 1fr
+  }
+  .card:nth-child(3) {
+    border-left:0
+  }
+  .card:nth-child(n+3) {
+    border-top:1px solid var(--line)
+  }
+  .heroSeal {
+    width:240px;
+    height:240px;
+    margin-right:12px
+  }
+  .navLinks {
+    gap:18px
+  }
+}
+@media(max-width:650px) {
+  #main,.navInner,footer {
+    width:calc(100% - 36px)
+  }
+  .navInner {
+    padding:14px 0
+  }
+  .brandName {
+    font-size:15px
+  }
+  .brandName span {
+    font-size:8px
+  }
+  .brand img {
+    width:35px;
+    height:35px
+  }
+  .navLinks>a:not(.backLink) {
+    display:none
+  }
+  .backLink {
+    font-size:11px;
+    padding:8px 12px
+  }
+  .hero {
+    padding:40px 0 30px;
+    flex-direction:column;
+    align-items:stretch;
+    gap:0
+  }
+  .heroSeal {
+    display:block;
+    width:200px;
+    height:200px;
+    margin:30px auto 12px;
+  }
+  .hero p {
+    font-size:13px
+  }
+  .desktopBreak {
+    display:none
+  }
+  .eyebrow {
     font-size:8px;
-    white-space:nowrap;
+    letter-spacing:1.7px
+  }
+  h1 {
+    margin:17px 0
+  }
+  .sectionLabel span {
+    font-size:9px
+  }
+  .card {
+    padding:19px 14px
+  }
+  .card label {
+    font-size:8px;
+    letter-spacing:1px
+  }
+  .value {
+    font-size:21px
+  }
+  .card .link {
+    font-size:14px
+  }
+  .reductionPercentage {
+    margin-left:4px;
+    font-size:9px;
+    padding:3px 5px
+  }
+  .historyHeading {
+    margin-top:30px;
+    align-items:flex-start;
+    flex-direction:column;
+    gap:5px
+  }
+  .historyHeading h2,.chartTitle h2 {
+    font-size:27px
+  }
+  th,td {
+    padding:0 14px
+  }
+  .supplyChart {
+    padding:18px 12px;
+    margin-top:24px
+  }
+  .chartHeader {
+    flex-direction:column;
+    padding:0 5px
+  }
+  .chartControls {
+    width:100%;
+    align-items:stretch
+  }
+  #chartSupplyValue {
+    font-size:16px
+  }
+  .rangeSelector {
+    grid-template-columns:repeat(5,1fr)
+  }
+  .chartPlot {
+    overflow:clip
+  }
+  #supplyChartSvg {
+    min-height:180px
+  }
+  .chartPlot {
+    min-height:180px
+  }
+  footer {
+    flex-direction:column;
+    gap:10px;
+    font-size:9px
+  }
+  .footerMotto {
+    font-size:8px
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  * {
+    scroll-behavior:auto!important;
+    animation:none!important
   }
 }
 </style>
@@ -483,29 +697,18 @@ footer{
 
 <body>
 
-<video id="bgvid" autoplay muted loop playsinline>
-  <source src="burn.mp4" type="video/mp4">
-</video>
-<div id="overlay"></div>
-
-<a class="topLinkCard" href="https://nummus.meme" target="_blank" rel="noopener">Nummus.meme</a>
-
-<!-- HEADER: LOGO - TITOLO - LOGO -->
-<div id="headerBar">
-  <div class="logoCard">
-    <img src="nummus.png" alt="Nummus logo">
-  </div>
-
-  <div class="titleCard">
-    <div class="title">NUMMUS — BURN LIVE</div>
-  </div>
-
-  <div class="logoCard">
-    <img src="nummus.png" alt="Nummus logo">
-  </div>
-</div>
-
-<div id="main">
+<header class="siteHeader">
+  <nav class="navInner" aria-label="Main navigation">
+    <a class="brand" href="https://nummus.meme" aria-label="NUMMUS Aeternitas home"><img src="nummus.png" alt=""><div class="brandName">NUMMUS<span>AETERNITAS</span></div></a>
+    <div class="navLinks"><a href="#supplyChartTitle">Supply reduction</a><a href="#transactions">Burn transactions</a><a class="backLink" href="https://nummus.meme">Nummus.meme ↗</a></div>
+  </nav>
+</header>
+<main id="main">
+  <section class="hero" aria-labelledby="pageTitle">
+    <div><div class="eyebrow">Engine II · Buy &amp; Burn</div><h1 id="pageTitle">Less supply.<br><em>Forever.</em></h1><p>Follow the NUMMUS burn. Every transaction recorded on-chain,<br class="desktopBreak"> every reduction permanent and verifiable.</p></div>
+    <div class="heroSeal"><div class="flameHalo" aria-hidden="true"><i style="--x:98.00%;--y:50.00%;--size:13px;--speed:1.10s;--delay:-0.00s"></i><i style="--x:96.80%;--y:60.68%;--size:15px;--speed:1.27s;--delay:-0.23s"></i><i style="--x:93.25%;--y:70.83%;--size:17px;--speed:1.44s;--delay:-0.46s"></i><i style="--x:87.53%;--y:79.93%;--size:19px;--speed:1.61s;--delay:-0.69s"></i><i style="--x:79.93%;--y:87.53%;--size:21px;--speed:1.78s;--delay:-0.92s"></i><i style="--x:70.83%;--y:93.25%;--size:13px;--speed:1.95s;--delay:-1.15s"></i><i style="--x:60.68%;--y:96.80%;--size:15px;--speed:2.12s;--delay:-1.38s"></i><i style="--x:50.00%;--y:98.00%;--size:17px;--speed:1.10s;--delay:-1.61s"></i><i style="--x:39.32%;--y:96.80%;--size:19px;--speed:1.27s;--delay:-1.84s"></i><i style="--x:29.17%;--y:93.25%;--size:21px;--speed:1.44s;--delay:-2.07s"></i><i style="--x:20.07%;--y:87.53%;--size:13px;--speed:1.61s;--delay:-2.30s"></i><i style="--x:12.47%;--y:79.93%;--size:15px;--speed:1.78s;--delay:-2.53s"></i><i style="--x:6.75%;--y:70.83%;--size:17px;--speed:1.95s;--delay:-2.76s"></i><i style="--x:3.20%;--y:60.68%;--size:19px;--speed:2.12s;--delay:-2.99s"></i><i style="--x:2.00%;--y:50.00%;--size:21px;--speed:1.10s;--delay:-3.22s"></i><i style="--x:3.20%;--y:39.32%;--size:13px;--speed:1.27s;--delay:-3.45s"></i><i style="--x:6.75%;--y:29.17%;--size:15px;--speed:1.44s;--delay:-3.68s"></i><i style="--x:12.47%;--y:20.07%;--size:17px;--speed:1.61s;--delay:-3.91s"></i><i style="--x:20.07%;--y:12.47%;--size:19px;--speed:1.78s;--delay:-4.14s"></i><i style="--x:29.17%;--y:6.75%;--size:21px;--speed:1.95s;--delay:-4.37s"></i><i style="--x:39.32%;--y:3.20%;--size:13px;--speed:2.12s;--delay:-4.60s"></i><i style="--x:50.00%;--y:2.00%;--size:15px;--speed:1.10s;--delay:-4.83s"></i><i style="--x:60.68%;--y:3.20%;--size:17px;--speed:1.27s;--delay:-5.06s"></i><i style="--x:70.83%;--y:6.75%;--size:19px;--speed:1.44s;--delay:-5.29s"></i><i style="--x:79.93%;--y:12.47%;--size:21px;--speed:1.61s;--delay:-5.52s"></i><i style="--x:87.53%;--y:20.07%;--size:13px;--speed:1.78s;--delay:-5.75s"></i><i style="--x:93.25%;--y:29.17%;--size:15px;--speed:1.95s;--delay:-5.98s"></i><i style="--x:96.80%;--y:39.32%;--size:17px;--speed:2.12s;--delay:-6.21s"></i></div><img src="nummus.png" alt="NUMMUS Aeternitas coin"></div>
+  </section>
+  <div class="sectionLabel"><h2>Burn overview</h2><span>Data refreshed every 60 seconds</span></div>
 
   <!-- CARDS -->
   <div class="cardsLayout">
@@ -546,23 +749,6 @@ footer{
 
   </div>
 
-  <!-- TABELLA -->
-  <div class="transactionsTable" tabindex="0" aria-label="Burn transactions">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Amount</th>
-          <th>Date and time</th>
-          <th>Transaction</th>
-        </tr>
-      </thead>
-      <tbody id="burnRows">
-        <tr><td colspan="4" style="padding:20px;text-align:center;">Loading…</td></tr>
-      </tbody>
-    </table>
-  </div>
-
   <!-- GRAFICO SUPPLY -->
   <section class="supplyChart" aria-labelledby="supplyChartTitle">
     <div class="chartHeader">
@@ -587,7 +773,26 @@ footer{
     </div>
   </section>
 
-</div>
+  <div class="historyHeading" id="transactions"><h2>Burn transactions</h2><p>Select a transaction to locate it on the chart · Times in UTC</p></div>
+  <!-- TABELLA -->
+  <div class="transactionsTable" tabindex="0" aria-label="Burn transactions">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Amount</th>
+          <th>Date and time</th>
+          <th>Transaction</th>
+        </tr>
+      </thead>
+      <tbody id="burnRows">
+        <tr><td colspan="4" style="padding:20px;text-align:center;">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+</main>
 
 <script>
 const chartState = {
@@ -943,7 +1148,7 @@ setInterval(loadData, 60000);
 </script>
 
 <footer>
-  © 2023 <a class="footer-link" href="https://torrino.space" target="_blank" rel="noopener">Torrino DAO</a> — Crafted with passion by <a class="footer-link" href="https://happydev.fi" target="_blank" rel="noopener">HAPPY</a>
+  <span class="footerMotto">NUMMUS Aeternitas · Permanent by design</span><span>© 2023 <a class="footer-link" href="https://torrino.space" target="_blank" rel="noopener">Torrino DAO</a> — Crafted with passion by <a class="footer-link" href="https://happydev.fi" target="_blank" rel="noopener">HAPPY</a></span>
 </footer>
 
 </body>
