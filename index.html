@@ -511,6 +511,18 @@ tbody tr:focus-visible {
 .tooltipRow+.tooltipRow {
   margin-top:4px
 }
+.tooltipRowPrimary {
+  display:block;
+  padding:3px 0 9px;
+  margin-bottom:8px;
+  border-bottom:1px solid var(--line);
+}
+.tooltipRowPrimary b {
+  display:block;
+  margin-top:4px;
+  color:var(--gold);
+  font-size:15px;
+}
 .tooltipRow span {
   color:var(--muted)
 }
@@ -815,6 +827,7 @@ const CHART = {
 };
 
 const numberFormatter = new Intl.NumberFormat("en-US", {maximumFractionDigits: 2});
+const burnAmountFormatter = new Intl.NumberFormat("en-US", {maximumFractionDigits: 20});
 
 async function loadData(){
   try{
@@ -1103,9 +1116,11 @@ document.getElementById("supplyChartSvg").addEventListener("pointermove",event=>
   const svg = event.currentTarget;
   const rect = svg.getBoundingClientRect();
   const x = ((event.clientX-rect.left)/rect.width)*CHART.width;
-  const point = chartState.points.reduce((nearest,current)=>
-    Math.abs(current.x-x)<Math.abs(nearest.x-x) ? current : nearest
-  );
+  const marker = event.target.closest?.(".supplyMarker");
+  const point = (marker && chartState.points[Number(marker.dataset.pointIndex)])
+    || chartState.points.reduce((nearest,current)=>
+      Math.abs(current.x-x)<Math.abs(nearest.x-x) ? current : nearest
+    );
   const crosshair = document.getElementById("chartCrosshair");
   const dot = document.getElementById("chartHoverDot");
   crosshair.setAttribute("x1",point.x);
@@ -1120,9 +1135,13 @@ document.getElementById("supplyChartSvg").addEventListener("pointermove",event=>
   const title = document.createElement("strong");
   title.textContent = formatUtcDateTime(point.timestamp,true);
   tooltip.appendChild(title);
-  [["Supply",`${numberFormatter.format(point.supply)} NUMMUS`],["Burned",numberFormatter.format(point.burnedCumulative)]].forEach(([label,value])=>{
+  [
+    ["Burned in this transaction",`${burnAmountFormatter.format(point.amount)} NUMMUS`],
+    ["Supply after burn",`${numberFormatter.format(point.supply)} NUMMUS`],
+    ["Total burned to date",`${numberFormatter.format(point.burnedCumulative)} NUMMUS`]
+  ].forEach(([label,value],index)=>{
     const row = document.createElement("div");
-    row.className = "tooltipRow";
+    row.className = index === 0 ? "tooltipRow tooltipRowPrimary" : "tooltipRow";
     const name = document.createElement("span");
     const amount = document.createElement("b");
     name.textContent = label;
