@@ -75,16 +75,20 @@ async function rpc(method, params, maxRetries = 4) {
 
       if (!res.ok) {
         // errore non temporaneo (400, 403, ecc.)
-        const msg = `RPC ${method}: HTTP ${res.status}`;
-        throw new Error(msg);
+        const error = new Error(`RPC ${method}: HTTP ${res.status}`);
+        error.retryable = false;
+        throw error;
       }
 
       const json = await res.json();
       if (json.error) {
-        throw new Error(`RPC ${method} errore: ${json.error.code} ${json.error.message}`);
+        const error = new Error(`RPC ${method} errore: ${json.error.code} ${json.error.message}`);
+        error.retryable = false;
+        throw error;
       }
       return json.result;
     } catch (e) {
+      if (e.retryable === false) throw e;
       lastError = e;
       console.warn(
         `RPC ${method}: errore di rete (tentativo ${
@@ -228,7 +232,7 @@ function writeJsonAtomic(outPath, obj) {
       sig,
       {
         encoding: "jsonParsed",
-        maxSupportedTransactionVersion: 0,
+        maxSupportedTransactionVersion: 1,
         commitment: "confirmed",
       },
     ]);
