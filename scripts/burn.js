@@ -19,7 +19,7 @@ const NUMMUS_MINT    = "9JK2U7aEkp3tWaFNuaJowWRgNys5DVaKGxWk73VT5ray";
 const API_KEY = process.env.HELIUS_API_KEY || process.env.HELIUS_APY_KEY;
 if (!API_KEY) {
   console.error("Errore: imposta HELIUS_API_KEY (o HELIUS_APY_KEY).");
-  process.exit(0); // non facciamo fallire il job, ma segnaliamo
+  process.exit(1);
 }
 
 const RPC_URL = `https://mainnet.helius-rpc.com/?api-key=${API_KEY}`;
@@ -37,8 +37,8 @@ function sleep(ms) {
 
 /**
  * RPC helper con retry + backoff.
- * NON lancia mai l’errore verso l’alto: in caso di fallimento definitivo,
- * logga e ritorna null così lo script può proseguire/chiudere pulito.
+ * Un errore definitivo interrompe la raccolta: pubblicare dati parziali
+ * farebbe sparire burn già verificati.
  */
 async function rpc(method, params, maxRetries = 4) {
   let lastError = null;
@@ -76,16 +76,12 @@ async function rpc(method, params, maxRetries = 4) {
       if (!res.ok) {
         // errore non temporaneo (400, 403, ecc.)
         const msg = `RPC ${method}: HTTP ${res.status}`;
-        console.error(msg);
-        return null;
+        throw new Error(msg);
       }
 
       const json = await res.json();
       if (json.error) {
-        console.error(
-          `RPC ${method} errore: ${json.error.code} ${json.error.message}`
-        );
-        return null;
+        throw new Error(`RPC ${method} errore: ${json.error.code} ${json.error.message}`);
       }
       return json.result;
     } catch (e) {
@@ -99,21 +95,13 @@ async function rpc(method, params, maxRetries = 4) {
     }
   }
 
-  console.error(
-    `RPC ${method} fallita dopo ${maxRetries + 1} tentativi: ${
-      lastError?.message || lastError
-    }`
-  );
-  return null;
+  throw new Error(`RPC ${method} fallita dopo ${maxRetries + 1} tentativi: ${lastError?.message || lastError}`);
 }
 
 async function getDecimals(mint) {
   const res = await rpc("getTokenSupply", [mint]);
   if (!res || !res.value) {
-    console.warn(
-      `Impossibile ottenere i decimals per ${mint}, uso fallback 6 decimali`
-    );
-    return 6;
+    throw new Error(`Impossibile ottenere i decimals per ${mint}`);
   }
   return Number(res.value.decimals);
 }
@@ -127,7 +115,6 @@ async function* iterSignatures(address, limit = 100, maxPages = 10) {
 
     const out = await rpc("getSignaturesForAddress", params);
     if (!out || out.length === 0) {
-      // niente più firme o errore RPC → stop pulito
       return;
     }
 
@@ -246,11 +233,7 @@ function writeJsonAtomic(outPath, obj) {
       },
     ]);
 
-    if (!tx) {
-      // errore RPC su questa tx (429 ecc) → skippa e continua
-      console.warn(`Impossibile leggere tx ${sig}, salto.`);
-      continue;
-    }
+    if (!tx) throw new Error(`Impossibile leggere tx ${sig}`);
 
     const burns = findBurnEvents(tx, NUMMUS_MINT, mintDecimals);
     for (const b of burns) {
@@ -282,10 +265,17 @@ function writeJsonAtomic(outPath, obj) {
   }
 
   const outPath = path.join(process.cwd(), "data", "burn.json");
+  if (fs.existsSync(outPath)) {
+    const previous = JSON.parse(fs.readFileSync(outPath, "utf8"));
+    const currentUrls = new Set(result.burns.map((burn) => burn.url));
+    const missing = (previous.burns || []).filter((burn) => !currentUrls.has(burn.url));
+    if (missing.length) {
+      throw new Error(`Raccolta incompleta: mancano ${missing.length} burn già pubblicati`);
+    }
+  }
   writeJsonAtomic(outPath, result);
   console.log(`Salvato: ${path.relative(process.cwd(), outPath)}`);
 })().catch((e) => {
-  // Qualsiasi errore “strano” non deve buttare giù il job:
-  console.error("⚠️ Errore non fatale in burn.js:", e.message || e);
-  process.exit(0);
+  console.error("Errore in burn.js:", e.message || e);
+  process.exitCode = 1;
 });
